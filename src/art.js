@@ -7,6 +7,8 @@
 const ART={
   scenePath:'assets/scene/',
   portraitPath:'assets/portrait/',
+  // 小头像用的 128×160 缩略图，由 tools/make-thumbs.py 生成
+  thumbPath:'assets/portrait/s/',
   // 场景图 1280×720 webp
   scenes:['office-lv1','office-lv2','office-lv3','phase-intake','phase-evidence','phase-argue','phase-close',
           'leads-market','signing','court','hallway','award','meeting','rivals','ending-rise','ending-fall'],
@@ -17,8 +19,20 @@ const ART={
   portraitCount:{partner:2,litigator:2,corporate:2,associate:2,paralegal:2,bd:2,star:3}
 };
 const PHASE_SCENES=['phase-intake','phase-evidence','phase-argue','phase-close'];
-function artMiss(img){const box=img.parentNode;if(box)box.classList.add('no-art');img.remove()}
-function sceneImg(id,cls=''){return id?`<img class="scene-img ${cls}" src="${ART.scenePath}${id}.webp" alt="" loading="lazy" decoding="async" onerror="artMiss(this)">`:''}
+// 图片加载失败先重试两次再降级。
+// 总览页每周 render 会自己重建 <img>，抖一下能自愈；但弹窗横幅只渲染一次，
+// 一失败就永久没图——重试是给那种情况兜底的。
+function artMiss(img){
+  const n=+(img.dataset.retry||0);
+  if(n<2){
+    const base=img.src.split('?')[0];
+    img.dataset.retry=n+1;
+    setTimeout(()=>{if(img.isConnected)img.src=base+'?r='+(n+1)},n?1800:700);
+    return;
+  }
+  const box=img.parentNode;if(box)box.classList.add('no-art');img.remove();
+}
+function sceneImg(id,cls='',eager){return id?`<img class="scene-img ${cls}" src="${ART.scenePath}${id}.webp" alt="" loading="${eager?'eager':'lazy'}"${eager?' fetchpriority="high"':''} decoding="async" onerror="artMiss(this)">`:''}
 function moodImg(mood){return mood&&ART.moods.includes(mood)?`<div class="scene-band plain">${sceneImg('mood-'+mood)}</div>`:''}
 function sceneBanner(id,title,sub){return `<div class="scene-band">${sceneImg(id)}<div class="scene-text"><b>${title}</b>${sub?`<small>${sub}</small>`:''}</div></div>`}
 // 领脸：一局之内同一个人永远同一张。存档里存 face 字段。
@@ -30,8 +44,9 @@ function pickFace(role,star){
   return pool[Math.floor(Math.random()*pool.length)];
 }
 function portraitBox(e){return e&&e.face?`<div class="portrait">${faceImg(e)}</div>`:''}
-function faceImg(e){return e&&e.face?`<img src="${ART.portraitPath}${e.face}.webp" alt="" loading="lazy" decoding="async" onerror="artMiss(this)">`:''}
+// small=true 取 128×160 缩略图（小头像用），否则取 512×640 原图（事件弹窗的大立绘用）
+function faceImg(e,small){return e&&e.face?`<img src="${small?ART.thumbPath:ART.portraitPath}${e.face}.webp" alt="" loading="lazy" decoding="async" onerror="artMiss(this)">`:''}
 // 头像：底下永远垫着色块 + 姓氏首字，图加载失败就露出来
-function avatarHtml(e,cls=''){return `<div class="avatar ${cls}" style="--avatar:${roleColors[e.role]};${e.star?'box-shadow:0 0 0 2px var(--brass)':''}" aria-hidden="true">${e.star?'★':roles[e.role][0][0]}${faceImg(e)}</div>`}
+function avatarHtml(e,cls=''){return `<div class="avatar ${cls}" style="--avatar:${roleColors[e.role]};${e.star?'box-shadow:0 0 0 2px var(--brass)':''}" aria-hidden="true">${e.star?'★':roles[e.role][0][0]}${faceImg(e,true)}</div>`}
 function officeScene(){return 'office-lv'+(clamp(S.office,0,2)+1)}
 function workScene(){const c=S.active.find(x=>!x.ready)||S.active[0];return c&&!c.ready?PHASE_SCENES[clamp(c.phase,0,3)]:officeScene()}

@@ -883,13 +883,13 @@ function caseCard(c){
 function renderHome(){
   const of=OFFICES[S.office];
   const set=`<section class="card set-card">
-      ${sceneImg(workScene())}
+      ${sceneImg(workScene(),'',true)}
       <div class="set-head"><div><b>${esc(of.name)}</b><br><small>${of.room}</small></div>
         <div style="text-align:right"><small>在办 ${S.active.length} / ${of.slots}</small><br><small>团队 ${S.staff.length} / ${of.cap}</small></div></div>
       <div class="blinds"></div>
       <div class="camera" aria-hidden="true">⚖</div>
       <div class="crew-dots">${S.staff.slice(0,7).map(e=>
-        `<div class="crew-dot"><i style="--c:${roleColors[e.role]}">${faceImg(e)}</i><b>${esc(e.name)}</b></div>`).join('')}</div>
+        `<div class="crew-dot"><i style="--c:${roleColors[e.role]}">${faceImg(e,true)}</i><b>${esc(e.name)}</b></div>`).join('')}</div>
     </section>`;
   const quick=`<section class="card section quick"><h2>常用操作</h2>
       <div class="operation-grid">

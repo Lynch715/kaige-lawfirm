@@ -288,6 +288,32 @@ group('美术层');
   const bigPort=ports.filter(f=>fs.statSync(path.join(portDir,f)).size>71680);
   ok('立绘单张不超过 70KB',bigPort.length===0,bigPort.join(','));
 
+  // 头像缩略图：换了立绘忘了重跑 tools/make-thumbs.py 的话，首屏会白下载 5 倍数据
+  const thumbDir=path.join(portDir,'s');
+  const thumbs=fs.existsSync(thumbDir)?fs.readdirSync(thumbDir).filter(f=>f.endsWith('.webp')):[];
+  const tset=new Set(thumbs);
+  const missThumb=ports.filter(f=>!tset.has(f));
+  const orphanThumb=thumbs.filter(f=>!have.has(f));
+  ok('每张立绘都有对应的头像缩略图',missThumb.length===0,missThumb.join(',')+'（跑 python3 tools/make-thumbs.py）');
+  ok('缩略图没有对不上原图的孤儿',orphanThumb.length===0,orphanThumb.join(','));
+
+  const staleThumb=ports.filter(f=>tset.has(f)&&
+    fs.statSync(path.join(thumbDir,f)).mtimeMs<fs.statSync(path.join(portDir,f)).mtimeMs);
+  ok('缩略图不比原图旧（换了图要重新生成）',staleThumb.length===0,staleThumb.join(',')+'（跑 python3 tools/make-thumbs.py）');
+
+  const badThumb=[];
+  for(const f of thumbs){
+    const buf=fs.readFileSync(path.join(thumbDir,f));
+    const i=buf.indexOf(Buffer.from('VP8 '));
+    if(i<0)continue;
+    const w=buf.readUInt16LE(i+14)&0x3fff,h=buf.readUInt16LE(i+16)&0x3fff;
+    if(w!==128||h!==160)badThumb.push(`${f} ${w}x${h}`);
+  }
+  ok('缩略图尺寸都是 128×160',badThumb.length===0,badThumb.join(' | '));
+
+  const thumbKB=thumbs.reduce((a,f)=>a+fs.statSync(path.join(thumbDir,f)).size,0)/1024;
+  ok('全部缩略图加起来不超过 120KB',thumbKB<=120,Math.round(thumbKB)+'KB');
+
   // 已出的图必须符合尺寸规范，否则会被拉伸
   const sizes=[];
   for(const f of onDisk){
