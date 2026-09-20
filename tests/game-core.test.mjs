@@ -242,6 +242,43 @@ group('美术层');
   ok('事件 mood 都在清单里',g.EVENTS.filter(e=>e.mood).every(e=>g.ART.moods.includes(e.mood)||g.ART.scenes.includes(e.mood)),
      g.EVENTS.filter(e=>e.mood&&!g.ART.moods.includes(e.mood)&&!g.ART.scenes.includes(e.mood)).map(e=>e.id).join(','));
   ok('缺图时 sceneImg 仍返回可降级的标签',g.sceneImg('office-lv1').includes('onerror'));
+
+  // 文件名打错的话，游戏会静默降级成纯 CSS，页面上什么都不说。
+  // 所以这里反过来查：assets 里真实存在的文件，名字必须都在清单里。
+  const legal=new Set([
+    ...g.ART.scenes,
+    ...g.ART.moods.map(m=>'mood-'+m)
+  ]);
+  const sceneDir=path.join(ROOT,'assets/scene');
+  const onDisk=fs.existsSync(sceneDir)?fs.readdirSync(sceneDir).filter(f=>f.endsWith('.webp')):[];
+  const strays=onDisk.map(f=>f.replace(/\.webp$/,'')).filter(n=>!legal.has(n));
+  ok('assets/scene 里没有清单外的文件名（打错名字游戏会静默不用）',strays.length===0,strays.join(','));
+
+  const portDir=path.join(ROOT,'assets/portrait');
+  const ports=fs.existsSync(portDir)?fs.readdirSync(portDir).filter(f=>f.endsWith('.webp')):[];
+  const badPort=ports.filter(f=>{
+    const m=f.match(/^([a-z]+)-(\d{2})\.webp$/);
+    if(!m)return true;
+    const n=g.ART.portraitCount[m[1]];
+    return !n||+m[2]<1||+m[2]>n;          // 编号超出 portraitCount 的也取不到
+  });
+  ok('assets/portrait 的文件名和编号都在 portraitCount 范围内',badPort.length===0,badPort.join(','));
+
+  // 已出的图必须符合尺寸规范，否则会被拉伸
+  const sizes=[];
+  for(const f of onDisk){
+    const buf=fs.readFileSync(path.join(sceneDir,f));
+    const i=buf.indexOf(Buffer.from('VP8 '));        // 简单 VP8 头解析
+    if(i<0)continue;
+    const w=buf.readUInt16LE(i+14)&0x3fff,h=buf.readUInt16LE(i+16)&0x3fff;
+    const isMood=f.startsWith('mood-');
+    const want=isMood?[960,540]:[1280,720];
+    if(w!==want[0]||h!==want[1])sizes.push(`${f} ${w}x${h}`);
+  }
+  ok('场景图尺寸都是 1280×720（氛围图 960×540）',sizes.length===0,sizes.join(' | '));
+
+  const tooBig=onDisk.filter(f=>fs.statSync(path.join(sceneDir,f)).size>92160);
+  ok('场景图单张不超过 90KB',tooBig.length===0,tooBig.join(','));
 }
 
 console.log(`\n${pass} 通过 / ${fail} 失败`);
