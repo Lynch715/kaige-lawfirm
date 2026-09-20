@@ -264,6 +264,30 @@ group('美术层');
   });
   ok('assets/portrait 的文件名和编号都在 portraitCount 范围内',badPort.length===0,badPort.join(','));
 
+  // 反方向：portraitCount 说有几张，就得真有几张。
+  // 先改数字后放图的话，pickFace 会抽到不存在的文件，静默退成色块，页面上什么都不提示。
+  const have=new Set(ports);
+  const promised=[];
+  for(const role in g.ART.portraitCount)
+    for(let i=1;i<=g.ART.portraitCount[role];i++){
+      const f=`${role}-${String(i).padStart(2,'0')}.webp`;
+      if(!have.has(f))promised.push(f);
+    }
+  ok('portraitCount 声明的立绘文件都真的存在',promised.length===0,promised.join(','));
+
+  // 立绘尺寸也得对，否则头像和事件弹窗里会被拉变形
+  const badSize=[];
+  for(const f of ports){
+    const buf=fs.readFileSync(path.join(portDir,f));
+    const i=buf.indexOf(Buffer.from('VP8 '));
+    if(i<0)continue;
+    const w=buf.readUInt16LE(i+14)&0x3fff,h=buf.readUInt16LE(i+16)&0x3fff;
+    if(w!==512||h!==640)badSize.push(`${f} ${w}x${h}`);
+  }
+  ok('立绘尺寸都是 512×640',badSize.length===0,badSize.join(' | '));
+  const bigPort=ports.filter(f=>fs.statSync(path.join(portDir,f)).size>71680);
+  ok('立绘单张不超过 70KB',bigPort.length===0,bigPort.join(','));
+
   // 已出的图必须符合尺寸规范，否则会被拉伸
   const sizes=[];
   for(const f of onDisk){
