@@ -1,0 +1,189 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+  <meta name="theme-color" content="#15201c">
+  <meta name="description" content="开个律所：从一间隔断办公室起步，承办诉讼与非诉案件，谈收费方案、排开庭期，在创收、声誉与执业红线之间经营一家律师事务所。">
+  <title>开个律所</title>
+  <meta name="apple-mobile-web-app-title" content="开个律所">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <style>
+
+    :root{--sat:env(safe-area-inset-top,0px);--sab:env(safe-area-inset-bottom,0px);--ink:#1e2521;--muted:#6b736d;--paper:#f3f1e8;--card:#fcfbf6;--line:#d8d6ca;--main:#1f4038;--main2:#37665a;--brass:#a8813c;--brass2:#c9a15e;--night:#15201c;--green:#2f6650;--warn:#9c3b2e;--warn2:#c05a45;--shadow:0 14px 38px #1e25211c}
+    *{box-sizing:border-box}input[type=checkbox],input[type=radio]{accent-color:var(--main)}html,body{margin:0;min-height:100%;font-family:"PingFang SC","Microsoft YaHei",system-ui,sans-serif;color:var(--ink);background:#e6e5d9}button,input,select{font:inherit;touch-action:manipulation}button{cursor:pointer;color:inherit}button:disabled{cursor:not-allowed;opacity:.45}
+    :focus-visible{outline:2px solid var(--main2);outline-offset:2px}
+    .hidden{display:none!important}.start{min-height:100vh;display:grid;place-items:center;padding:calc(24px + var(--sat)) 24px calc(24px + var(--sab));overflow:hidden;background:radial-gradient(circle at 75% 18%,#c9a15e5c 0 4%,transparent 20%),radial-gradient(circle at 15% 85%,#1f403888,transparent 28%),linear-gradient(145deg,#111917,#1f322b 55%,#121a17)}
+    .start:before,.start:after{content:"";position:fixed;width:44vw;height:140vh;top:-20vh;background:linear-gradient(90deg,transparent,#ffffff0b,transparent);transform:rotate(18deg);pointer-events:none}.start:after{right:-20vw;transform:rotate(-22deg)}
+    .start-card{width:min(780px,100%);position:relative;padding:58px;border:1px solid #d2d6c9;background:#f7f3ecf2;box-shadow:0 38px 90px #0008;border-radius:4px}
+    .start-card:before{content:"";position:absolute;inset:12px;border:1px solid #90977f55;pointer-events:none}.eyebrow{font-size:13px;letter-spacing:.28em;color:var(--main);font-weight:800}.start h1{font-family:serif;font-size:clamp(42px,8vw,76px);letter-spacing:.08em;margin:14px 0 12px;line-height:1}.start p{font-size:17px;color:#50524c;line-height:1.8;max-width:560px}.actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:24px}
+    button{border:1px solid #c6c4b6;background:#efede3;border-radius:2px;padding:9px 14px;font-weight:700;box-shadow:none;transition:background .15s,border-color .15s}button:hover:not(:disabled){filter:brightness(.965)}button:active:not(:disabled){filter:brightness(.92)}button.primary{background:var(--main);border-color:#16302a;color:#f6f3e8;box-shadow:inset 0 0 0 1px #c9a15e59}button.primary:hover:not(:disabled){background:#275246;border-color:#16302a}.subtle{font-weight:500;color:var(--muted)}
+    .app{min-height:100vh;background:linear-gradient(#e2e4dd,#f0f1ed)}.topbar{height:calc(72px + var(--sat));padding-top:var(--sat);position:sticky;top:0;z-index:10;display:flex;align-items:center;gap:18px;padding:0 22px;color:#f3edde;background:#181916;border-bottom:3px solid var(--brass);box-shadow:0 5px 18px #24140f35}.brand{display:flex;align-items:center;gap:11px;min-width:215px}.brand-mark{width:34px;height:34px;display:grid;place-items:center;border:1px solid var(--brass);border-radius:2px;color:var(--brass2);background:linear-gradient(160deg,#27382f,#18241f);font-family:serif;font-size:19px}.brand>div:last-child{min-width:0}.brand b{display:block;letter-spacing:.08em;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.brand small{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:block}.brand small{color:#babcb5}.clock{margin-left:auto;text-align:right}.clock b{display:block;font-family:serif;font-size:18px}.clock small{color:#bfc2b9}.clock-compact{display:none}.speed{display:flex;gap:4px}.speed button{min-width:40px;padding:6px 9px;color:#dee1d7;background:#2b2c28;border-color:#4b4d46;box-shadow:none}.speed button.active{background:var(--main);border-color:var(--brass)}.speed button.step{color:#e8d9b8;border-color:#5f6257}.speed button.step:hover:not(:disabled){background:#383b33}
+    .layout{display:grid;grid-template-columns:200px minmax(0,1fr) 270px;gap:16px;max-width:1540px;margin:auto;padding:18px}.side,.right{position:sticky;top:calc(90px + var(--sat));align-self:start}.card{background:var(--card);border:1px solid var(--line);border-radius:8px;box-shadow:var(--shadow)}.side{padding:10px}.nav{width:100%;display:flex;align-items:center;gap:10px;margin:3px 0;padding:11px;border:0;box-shadow:none;background:transparent;text-align:left}.nav.active{color:#fff;background:var(--main)}.side hr{border:0;border-top:1px solid var(--line);margin:10px}.side .mini{font-size:12px;color:var(--muted);padding:10px;line-height:1.7}.right{display:grid;gap:12px}.panel{padding:16px}.panel h3,.section h2{margin:0 0 12px}.feed{max-height:56vh;overflow:auto}.news{padding:10px 0;border-bottom:1px dashed #d1d4ca;font-size:13px;line-height:1.55}.news time{display:block;color:var(--main);font-size:11px;font-weight:800}.trend-card{color:#f2efe2;background:linear-gradient(145deg,#24443b,#16241f);border:0}.trend-card small{color:#d4d7cd}.trend-card b{display:block;font-family:serif;font-size:22px;margin:6px 0;color:#ddc186}
+    main{min-width:0}.stats{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:12px}.stat{padding:14px;min-width:0}.stat label,.stat small{display:block;color:var(--muted);font-size:12px}.stat b{display:block;font-size:20px;margin:5px 0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.section{padding:18px;margin-bottom:12px}.split{display:flex;align-items:center;gap:12px}.grow{flex:1}.tag{display:inline-block;border:1px solid #c5c9bc;background:#eee8dc;color:#575c4c;border-radius:99px;font-size:11px;padding:3px 8px;vertical-align:middle}.tag.red{background:#f5dbd7;color:#8a2622;border-color:#e7aaa5}.tag.green{background:#dceee5;color:#255744;border-color:#a8cdbb}.hint.danger{border-left-color:var(--warn);background:#f6ece8;color:#6e3a31}.hint{padding:12px;background:#eaece5;border-left:3px solid var(--brass);color:#54564f;line-height:1.65;font-size:13px}
+    .studio{display:grid;grid-template-columns:minmax(340px,1.15fr) minmax(300px,.85fr);gap:12px}.set-card{min-height:260px;align-self:start;position:relative;overflow:hidden;color:white;background:linear-gradient(#1d2b26 0 58%,#3c3a2d 58%);border:0}.set-head{position:absolute;z-index:2;left:20px;right:20px;top:18px;display:flex;justify-content:space-between}.set-head small{color:#d7d9d3}.blinds{position:absolute;inset:0;pointer-events:none;background:repeating-linear-gradient(101deg,#ffffff00 0 20px,#ffffff16 20px 28px);-webkit-mask-image:linear-gradient(105deg,#000 0 40%,transparent 74%);mask-image:linear-gradient(105deg,#000 0 40%,transparent 74%)}.camera{position:absolute;right:24px;bottom:62px;font-size:56px;opacity:.5;filter:drop-shadow(0 8px 6px #0008)}.crew-dots{position:absolute;left:18px;right:18px;bottom:18px;display:flex;gap:8px;justify-content:center;align-items:flex-end}.crew-dot{width:54px;text-align:center;font-size:11px}.crew-dot i{display:block;width:34px;height:34px;margin:auto;border-radius:3px;background:var(--c,#3f5a4e);border:1px solid #d7c9a5;box-shadow:0 0 0 2px #16221d}.crew-dot b{display:block;margin-top:4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.dashboard{display:grid;gap:12px}.operation-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:8px}.operation-grid button{min-width:0;min-height:48px;padding:8px 6px}
+    .project{padding:15px;border:1px solid #d0d3c9;background:#fdfaf3;margin-top:10px}.project-head{display:flex;gap:10px;align-items:flex-start}.poster{position:relative;width:54px;aspect-ratio:3/4;display:grid;place-items:center;flex:none;color:#f1e6cc;background:linear-gradient(160deg,var(--main),#16251f);font-family:serif;font-size:22px;border:1px solid #14221c;border-left:6px solid #0f1c17;border-radius:1px}.poster:after{content:"";position:absolute;top:9px;right:-2px;width:15px;height:4px;background:var(--brass);border-radius:1px}.project h3{margin:0 0 5px}.project p{margin:4px 0;color:var(--muted);font-size:13px}.bar{position:relative;height:9px;overflow:hidden;background:#e2e0d3;border:1px solid #d0cec1;border-radius:1px;margin:12px 0}.bar:after{content:"";position:absolute;inset:0;pointer-events:none;background:repeating-linear-gradient(90deg,transparent 0 calc(25% - 1px),#00000026 calc(25% - 1px) 25%)}.bar i{display:block;height:100%;background:linear-gradient(90deg,var(--main),var(--main2))}.qualities{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}.qualities div{padding:7px;text-align:center;background:#e4e6df;font-size:11px}.qualities b{display:block;font-size:15px}.script-grid,.work-grid,.facility-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(235px,1fr));gap:10px}.script,.work,.facility{padding:15px;border:1px solid #d2d5cc;background:#fdfbf5}.script h3,.work h3,.facility h3{margin:0 0 6px}.script p,.work p,.facility p{min-height:45px;color:var(--muted);font-size:13px;line-height:1.55}.work .score{font:26px/1.1 serif;color:var(--main);margin:8px 0 2px;min-height:0}.work .verdict{min-height:0}.staff{display:grid;grid-template-columns:48px 1fr auto;gap:12px;align-items:center;padding:13px 0;border-bottom:1px solid #e0e2db}.avatar{width:44px;height:44px;display:grid;place-items:center;color:#f6f3e8;border-radius:3px;background:var(--avatar,#3f5a4e);font-family:serif;font-size:18px}.staff h3{margin:0 0 3px}.staff p{margin:3px 0;color:var(--muted);font-size:12px}.staff aside{text-align:right;font-size:12px}.energy{height:5px;background:#dfe2d9}.energy i{display:block;height:100%;background:var(--green)}
+    .ip-grid,.audience-grid,.rival-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(235px,1fr));gap:10px}.ip-card,.audience-card,.rival-card{padding:15px;border:1px solid #d2d5cc;background:#fdfbf5}.ip-card h3,.audience-card h3,.rival-card h3{margin:0 0 6px}.ip-card p,.audience-card p,.rival-card p{min-height:45px;color:var(--muted);font-size:13px;line-height:1.55}.project-list{display:grid;gap:10px}.project-actions,.card-actions{display:flex;gap:8px;align-items:stretch;flex-wrap:wrap;margin-top:10px}.project-actions button,.card-actions button{flex:1;min-width:110px}.deal-grid{display:grid;gap:9px;margin:12px 0}.deal{display:grid;grid-template-columns:22px minmax(0,1fr);gap:10px;align-items:start;padding:12px;border:1px solid #c7cabf;background:#fdfaf4;cursor:pointer}.deal:has(input:checked){border-color:var(--main);box-shadow:0 0 0 1px var(--main);background:#fcf8ef}.deal input{width:20px;height:20px;margin:2px 0}.deal b,.deal small{display:block}.deal small{margin-top:4px;color:var(--muted);line-height:1.55}.calendar-row{display:grid;grid-template-columns:minmax(150px,.45fr) 1fr;gap:10px;align-items:start;margin:12px 0}.slate{display:grid;gap:6px}.slate-item{display:grid;grid-template-columns:74px minmax(0,1fr) auto;gap:8px;align-items:center;padding:8px 10px;background:#e8eae3;border-left:3px solid var(--brass);font-size:12px}.slate-item.danger{border-left-color:var(--main);background:#f7e1dd}.meter{height:7px;overflow:hidden;border-radius:9px;background:#dcdfd6}.meter i{display:block;height:100%;background:linear-gradient(90deg,var(--brass),var(--main2))}.rank{display:grid;grid-template-columns:38px 1fr auto;gap:10px;padding:10px 0;border-bottom:1px solid #e0e2da;align-items:center}.rank .no{font-size:18px;color:var(--main);font-family:serif}.empty{padding:35px;text-align:center;color:var(--muted);border:1px dashed #c6c9bf;background:#f8f5ef}.bottomnav{display:none}.only-narrow{display:none}
+    html:has(dialog[open]){overflow:hidden}dialog{width:min(720px,calc(100% - 24px));max-height:88vh;max-height:88dvh;padding:0;border:1px solid #a8ac9e;border-radius:8px;background:var(--paper);box-shadow:0 30px 100px #0009;color:var(--ink)}dialog[open]{display:flex;flex-direction:column}dialog::backdrop{background:#0f100dc9;backdrop-filter:blur(2px)}.dhead,.dfoot{display:flex;align-items:center;gap:12px;padding:15px 18px;background:#1d1e1a;color:#f3ecdc;flex:none}.dhead h2{margin:0;flex:1;min-width:0;font-family:serif}.dhead button{flex:none;color:white;background:transparent;border-color:#5c6054;box-shadow:none}.dbody{padding:18px;overflow:auto;min-height:0;max-height:none;overscroll-behavior:contain}.dfoot{justify-content:flex-end;background:#e4e6de;color:inherit;border-top:1px solid var(--line);flex-wrap:wrap}.dfoot button{min-width:0}.form{display:grid;grid-template-columns:1fr 1fr;gap:12px}.field label{display:block;font-size:12px;font-weight:800;margin-bottom:5px;color:#54564f}.field input,.field select{width:100%;padding:10px;border:1px solid #c1c4ba;background:#fff;border-radius:4px}.picks{display:grid;grid-template-columns:1fr 1fr;gap:7px}.pick{display:flex;gap:9px;align-items:center;padding:9px;border:1px solid #cbcec5;background:#fdfaf4}.pick input{width:20px;height:20px;flex:none}.pick small{display:block;color:var(--muted)}.choice{display:block;width:100%;margin:8px 0;padding:13px;text-align:left}.choice small{display:block;color:var(--muted);margin-top:3px}.toast{position:fixed;z-index:30;left:50%;bottom:calc(24px + env(safe-area-inset-bottom));max-width:calc(100% - 28px);text-align:center;line-height:1.45;transform:translate(-50%,20px);opacity:0;visibility:hidden;pointer-events:none;padding:11px 18px;border-radius:4px;color:#fff;background:#1d1e1a;transition:.2s}.toast.show{opacity:1;visibility:visible;transform:translate(-50%,0)}
+    @media(max-width:1100px){.layout{grid-template-columns:180px 1fr}.right{display:none}.stats{grid-template-columns:repeat(3,1fr)}.only-narrow{display:block}}
+    @media(max-width:760px){.topbar{height:calc(64px + var(--sat));padding:var(--sat) 10px 0;gap:8px}.brand{min-width:0}.brand small{display:none}.clock{font-size:11px;line-height:1.2}.clock b{font-size:13px;white-space:nowrap}.clock-wide{display:none}.clock-compact{display:inline}.speed button{padding:5px 7px;min-height:44px;min-width:42px}.layout{display:block;padding:10px 10px 82px}.layout button,dialog button,.start button{min-height:44px}.side{display:none}.stats{grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}.stat:first-child{grid-column:span 2}.stat{padding:10px;min-width:0}.stat label{font-size:11px}.stat b{font-size:16px;overflow:hidden;text-overflow:ellipsis}.stat small{display:none}.stat:first-child small{display:block;font-size:10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.section{padding:15px}.studio{grid-template-columns:1fr}.set-card{min-height:210px}.qualities{grid-template-columns:1fr 1fr}.form,.picks{grid-template-columns:1fr}.script-grid,.work-grid,.facility-grid{grid-template-columns:1fr}.script>button,.work>button,.facility>button{width:100%;min-height:46px}.staff{grid-template-columns:43px minmax(0,1fr);gap:10px;align-items:start}.staff aside{grid-column:2;text-align:left;display:flex;align-items:center;justify-content:space-between;gap:10px}.staff aside button{flex:none}.upgrade-split{display:block}.upgrade-split button{width:100%;margin-top:10px}.dfoot{padding:12px calc(12px + env(safe-area-inset-right)) calc(12px + env(safe-area-inset-bottom)) calc(12px + env(safe-area-inset-left));align-items:stretch}.dfoot button{flex:1 1 auto;min-width:0;padding:8px 10px}.toast{bottom:calc(84px + var(--sab))}.bottomnav{position:fixed;display:grid;grid-template-columns:repeat(5,1fr);left:0;right:0;bottom:0;z-index:15;padding:5px 4px calc(5px + var(--sab));background:#191917;border-top:2px solid var(--brass)}.bottomnav button{border:0;box-shadow:none;background:transparent;color:#c3c6bc;padding:7px 2px;font-size:11px;min-height:44px}.bottomnav button.active{color:#edd49c}.start-card{padding:38px 28px}.operation-grid{grid-template-columns:1fr 1fr}}
+    @media(max-width:760px){.studio>.dashboard{display:contents}.orders{grid-template-columns:repeat(3,minmax(0,1fr))}.set-card{order:1}.board{order:2}.quick{order:3}.premiere{grid-template-columns:96px minmax(0,1fr)}.premiere .poster-svg{width:96px}.orders{grid-template-columns:repeat(3,minmax(0,1fr))}.ip-grid,.audience-grid,.rival-grid{grid-template-columns:1fr}.ip-card p,.audience-card p,.rival-card p,.work p{min-height:0}.calendar-row{grid-template-columns:1fr}.project-actions,.card-actions{display:grid;grid-template-columns:1fr 1fr}.project-actions button,.card-actions button{min-width:0;width:100%}.slate-item{grid-template-columns:68px minmax(0,1fr);align-items:start}.slate-item>span:last-child{grid-column:2}}
+    @media(max-width:470px){.brand{width:38px;flex:none}.brand>div:last-child{display:none}.clock{margin-left:0;flex:1}}
+    @media(max-width:360px){.topbar{gap:6px;padding:var(--sat) 6px 0}.speed{gap:2px}.speed button{padding:5px 6px}.start{padding:calc(12px + var(--sat)) 12px calc(12px + var(--sab))}.start-card{padding:34px 24px}.start h1{font-size:38px;letter-spacing:.03em;white-space:nowrap}.start p{font-size:15px;line-height:1.75}.start .actions{display:grid;grid-template-columns:1fr;margin-top:20px}.start .actions button{width:100%}}
+    @media(prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}button:hover:not(:disabled){transform:none}}
+    /* ── 美术层：图没到位时静默降级回纯 CSS ── */
+    .scene-img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;z-index:0}
+    .set-card .crew-dots{z-index:2}
+    .set-card:has(.scene-img){aspect-ratio:16/9;min-height:0}
+    .set-card:has(.scene-img):before{content:"";position:absolute;inset:0;z-index:1;background:linear-gradient(#141513d9,#1415132e 40%,#141513ee)}
+    .set-card:has(.scene-img) .blinds,.set-card:has(.scene-img) .camera{display:none}
+    .avatar{position:relative;overflow:hidden}.avatar img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:50% 14%}
+    .crew-dot i{position:relative;overflow:hidden}.crew-dot i img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:50% 12%}
+    .scene-band{position:relative;overflow:hidden;height:128px;border-radius:3px;margin-bottom:14px;background:linear-gradient(120deg,#1d2b26,#3a4a3c)}
+    .scene-band .scene-text{position:relative;z-index:2;height:100%;display:flex;flex-direction:column;justify-content:flex-end;gap:4px;padding:14px 16px;color:#f3edde;background:linear-gradient(#0000 35%,#141513e0)}
+    .scene-band b{font-family:serif;font-size:21px;letter-spacing:.04em}.scene-band small{color:#d1d4ca;font-size:12px}
+    .scene-band.plain{height:118px}.scene-band.plain.no-art{display:none}
+    .portrait{float:right;width:34%;max-width:200px;aspect-ratio:4/5;position:relative;overflow:hidden;margin:0 0 12px 14px;border:1px solid #b6baab;border-radius:6px;background:linear-gradient(160deg,#30332b,#191a16)}
+    .portrait.no-art{display:none}.portrait img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+    .dbody:after{content:"";display:block;clear:both}
+    .premiere{display:grid;grid-template-columns:120px minmax(0,1fr);gap:14px;align-items:start;margin-bottom:14px}
+    .premiere .poster-svg{width:120px;aspect-ratio:2/3;border-radius:4px;display:block}
+    .big-score{font:44px/1 serif;color:var(--main);margin-bottom:6px}
+    .work-top{display:grid;grid-template-columns:72px minmax(0,1fr);gap:10px;align-items:start;margin-bottom:10px}
+    .work-top .poster-svg{width:72px;aspect-ratio:2/3;border-radius:3px;display:block}
+    .work-top h3{margin:0 0 5px}.work .work-top p{min-height:0;margin:6px 0 0}
+    .chron{max-height:300px;overflow:auto;font-size:13px;line-height:1.85}
+    .fold{background:var(--card);border:1px solid var(--line);border-radius:8px;box-shadow:var(--shadow);margin-bottom:12px;overflow:hidden}
+    .fold>summary{display:flex;align-items:center;gap:9px;min-height:52px;padding:14px 18px;cursor:pointer;font-family:serif;font-size:20px;font-weight:700;list-style:none}
+    .fold>summary::-webkit-details-marker{display:none}
+    .fold>summary:after{content:"▾";margin-left:auto;font-family:system-ui;font-size:15px;color:var(--muted)}
+    .fold[open]>summary:after{content:"▴"}
+    .fold>summary:hover{background:#f8f5ee}
+    .fold .fold-body{padding:0 18px 16px}
+    @media(max-width:760px){.fold>summary{padding:13px 15px;font-size:18px}.fold .fold-body{padding:0 15px 15px}}
+    .picks{grid-template-columns:1fr}
+    .pick{align-items:flex-start;gap:11px;padding:11px 12px}
+    .pick input{margin-top:3px}
+    .pick-info b{font-size:14.5px}
+    .pick-info small{display:block;margin-top:3px;color:var(--muted);font-size:12px;line-height:1.5}
+    .pick-info small b{font-size:12px}
+    .pick-info .key{color:var(--main)}
+    .pick-info .warn{color:var(--main)}
+    .pick:has(input:checked){border-color:var(--main);background:#fcf8ef}
+    dialog>.toast{position:absolute;bottom:80px;max-width:calc(100% - 36px)}
+    .installbar{position:fixed;z-index:40;left:50%;bottom:calc(20px + env(safe-area-inset-bottom));width:min(520px,calc(100% - 24px));
+      transform:translate(-50%,140%);opacity:0;transition:.28s cubic-bezier(.2,.8,.3,1);
+      display:flex;align-items:center;gap:13px;flex-wrap:wrap;padding:14px 16px;color:#f3edde;
+      background:#191a17;border:1px solid #5b5f52;border-left:3px solid var(--brass);border-radius:8px;box-shadow:0 22px 60px #0009}
+    .installbar.show{transform:translate(-50%,0);opacity:1}
+    .installbar img{border-radius:9px;flex:none}
+    .installbar b{display:block;font-family:serif;font-size:17px;letter-spacing:.03em}
+    .installbar small{display:block;margin-top:3px;color:#bdc0b7;font-size:12px;line-height:1.5}
+    .installbar .ib-act{display:flex;gap:8px;margin-left:auto}
+    .installbar .ib-act button{background:#2c2d2810;border-color:#5b5f52;color:#ece5d6;box-shadow:none}
+    .installbar .ib-act button.primary{background:var(--main);border-color:#13293d;color:#fff}
+    .installbar .ib-tip{flex:0 0 100%;margin:4px 0 0;padding-top:10px;border-top:1px dashed #4e5146;color:#cfd2c7;font-size:12.5px;line-height:1.7}
+    .installbar .ib-tip b{display:inline;font-family:inherit;font-size:inherit;color:var(--brass)}
+    @media(max-width:760px){.installbar{bottom:calc(74px + env(safe-area-inset-bottom))}.installbar .ib-act{margin-left:0;flex:1 1 100%}.installbar .ib-act button{flex:1}}
+    .goal-list{margin-top:10px;display:grid;gap:2px}
+    .goal-row{display:grid;grid-template-columns:20px auto 1fr;gap:8px;align-items:baseline;padding:6px 2px;border-bottom:1px dashed #dbddd5;font-size:13px;color:var(--muted)}
+    .goal-row i{font-style:normal;color:#a8ac9f}.goal-row b{color:#73756e;font-weight:700}
+    .goal-row.ok i{color:var(--green)}.goal-row.ok b{color:var(--ink)}
+    .chron div{padding:4px 2px;border-bottom:1px dashed #d9dbd3}
+    #originBody .choice b{font-size:16px}
+    .orders{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:6px;margin-top:12px}
+    .orders button{min-width:0;padding:9px 4px;font-size:12px}
+    .orders button.on{color:#f6f3e8;background:var(--main);border-color:#16302a;box-shadow:inset 0 0 0 1px #c9a15e59}
+    .order-hint{margin:8px 0 0;font-size:12px}
+    @media(max-width:760px){dialog>.toast{bottom:88px}.scene-band{height:104px}.scene-band b{font-size:18px}.portrait{width:40%}.orders{grid-template-columns:repeat(3,minmax(0,1fr))}.studio>.dashboard{display:contents}.set-card{order:1}.board{order:2}.quick{order:3}}
+  
+    .stat.danger b{color:var(--warn)}.riskbar{height:9px;border-radius:9px;overflow:hidden;background:#dcdfd6;margin:8px 0 4px}
+    .riskbar i{display:block;height:100%;border-radius:inherit;transition:width .3s}
+    .risk-ok i{background:linear-gradient(90deg,#4d8e72,#7fb79a)}
+    .risk-mid i{background:linear-gradient(90deg,#818c67,#cab588)}
+    .risk-hot i{background:linear-gradient(90deg,var(--warn),var(--warn2))}
+    .risk-note{font-size:12px;color:var(--muted);line-height:1.6}
+    .risk-note.hot{color:var(--warn);font-weight:700}
+    .dept{display:inline-block;width:8px;height:8px;border-radius:2px;margin-right:6px;background:var(--d,#888);vertical-align:middle}
+    .verdict{font-family:serif;font-size:19px;color:var(--main);margin:2px 0 6px}
+    .verdict.bad{color:var(--warn)}
+    .fee-note{margin-top:8px;padding:10px;border-left:3px solid var(--brass);background:#eaece5;font-size:12.5px;line-height:1.65;color:#54564f}
+    .client-rel{display:flex;gap:3px;margin-top:5px}
+    .client-rel i{width:13px;height:4px;border-radius:2px;background:#d3d5cd}
+    .client-rel i.on{background:var(--brass)}
+
+  </style>
+</head>
+<body>
+  <section id="start" class="start">
+    <div class="start-card">
+      <div class="eyebrow">律师事务所经营模拟 · 长线经营版</div>
+      <h1>开个律所</h1>
+      <p>从一间隔断办公室起步，接诉讼和非诉的案子，谈收费方案、排开庭期、攒客户，在创收、声誉和执业红线之间，把一家小所做成招牌。</p>
+      <div class="actions"><button class="primary" onclick="openOrigins()">开一家新所</button><button id="continueBtn" onclick="continueGame()">继续经营</button><button onclick="openDialog('helpDialog')">执业说明</button></div>
+    </div>
+  </section>
+
+  <div id="app" class="app hidden">
+    <header class="topbar">
+      <div class="brand"><div class="brand-mark" aria-hidden="true">律</div><div><b id="firmName">明诚律师事务所</b><small id="officeName">写字楼隔断间</small></div></div>
+      <div id="clock" class="clock" role="status" aria-live="off"></div>
+      <div class="speed" role="group" aria-label="推进速度"><button data-speed="0" aria-label="暂停" onclick="setSpeed(0)">Ⅱ</button><button class="step" aria-label="推进一周" title="推进一周（空格或 →）" onclick="stepWeek()">单周</button><button data-speed="1" aria-label="1 倍速" onclick="setSpeed(1)">1×</button><button data-speed="2" aria-label="2 倍速" onclick="setSpeed(2)">2×</button><button data-speed="4" aria-label="4 倍速" onclick="setSpeed(4)">4×</button></div>
+    </header>
+    <div class="layout">
+      <aside class="side card">
+        <button class="nav active" data-page="home" onclick="showPage('home')">◉ 律所总览</button>
+        <button class="nav" data-page="leads" onclick="showPage('leads')">▱ 案源市场</button>
+        <button class="nav" data-page="team" onclick="showPage('team')">♟ 律师团队</button>
+        <button class="nav" data-page="files" onclick="showPage('files')">▤ 案卷库</button>
+        <button class="nav" data-page="strategy" onclick="showPage('strategy')">✦ 律所战略</button>
+        <hr><button class="nav" onclick="manualSave()">存 保存进度</button><button class="nav" onclick="openDialog('helpDialog')">? 执业说明</button><button class="nav" onclick="deleteSave()">× 删除存档</button>
+        <div class="mini">每 10 秒推进一周。点「单周」只走一周就停（空格或 → 也行）。办案指令会一直执行，直到你改它。</div>
+      </aside>
+      <main><div id="page-home"></div><div id="page-leads" class="hidden"></div><div id="page-team" class="hidden"></div><div id="page-files" class="hidden"></div><div id="page-strategy" class="hidden"></div></main>
+      <aside class="right"><section id="trendPanel" class="card panel trend-card"></section><section class="card panel"><h3>业内消息</h3><div id="newsFeed" class="feed"></div></section></aside>
+    </div>
+    <nav class="bottomnav" aria-label="主导航"><button class="active" data-page="home" onclick="showPage('home')">◉<br>总览</button><button data-page="leads" onclick="showPage('leads')">▱<br>案源</button><button data-page="team" onclick="showPage('team')">♟<br>团队</button><button data-page="files" onclick="showPage('files')">▤<br>案卷</button><button data-page="strategy" onclick="showPage('strategy')">✦<br>战略</button></nav>
+  </div>
+
+  <dialog id="caseDialog" aria-labelledby="caseTitle"><div class="dhead"><h2 id="caseTitle">接案</h2><button aria-label="关闭" onclick="closeDialog('caseDialog')">×</button></div><div class="dbody"><div id="caseOriginHint" class="hint" style="margin-bottom:12px"></div><div id="caseBrief"></div><div class="form"><div class="field"><label for="caseFee">收费方案</label><select id="caseFee" onchange="previewCase()"><option value="fixed">固定收费 · 签约收七成</option><option value="risk">风险代理 · 结案按结果分成</option><option value="hourly">计费小时 · 每周结算</option></select></div><div class="field"><label for="caseEffort">办案投入</label><select id="caseEffort" onchange="previewCase()"><option value="lean">精简办理 · 省钱</option><option value="normal" selected>常规投入</option><option value="heavy">重兵投入 · 烧钱</option></select></div></div><div id="casePreview" class="hint" style="margin-top:12px"></div><h3>组建办案组 <small class="subtle">同一个人不能同时进两个案组</small></h3><div id="teamPicks" class="picks"></div></div><div class="dfoot"><button onclick="closeDialog('caseDialog')">先不接</button><button class="primary" onclick="startCase()">签委托协议</button></div></dialog>
+
+  <dialog id="hearingDialog" aria-labelledby="hearingHead"><div class="dhead"><h2 id="hearingHead">排期与结案准备</h2><button aria-label="关闭" onclick="closeDialog('hearingDialog')">×</button></div><div id="hearingBody" class="dbody"></div><div class="dfoot"><button id="polishBtn" onclick="polishCase()">追加两周补强</button><button class="primary" onclick="confirmHearing()">确认排期</button></div></dialog>
+
+  <dialog id="eventDialog" aria-labelledby="eventTitle"><div class="dhead"><h2 id="eventTitle">办案抉择</h2></div><div id="eventBody" class="dbody"></div><div class="dfoot"><button id="eventSkipBtn" onclick="skipEvent()">按原方案办 · 不额外投入</button></div></dialog>
+
+  <dialog id="recruitDialog" aria-labelledby="recruitHead"><div class="dhead"><h2 id="recruitHead">招人</h2><button aria-label="关闭" onclick="closeDialog('recruitDialog')">×</button></div><div id="recruitBody" class="dbody"></div><div class="dfoot"><button onclick="refreshCandidates()">换一批 · 8 万</button><button onclick="closeDialog('recruitDialog')">关闭</button></div></dialog>
+
+  <dialog id="personDialog" aria-labelledby="personHead"><div class="dhead"><h2 id="personHead">执业档案</h2><button aria-label="关闭" onclick="closeDialog('personDialog')">×</button></div><div id="personBody" class="dbody"></div><div class="dfoot"><button onclick="closeDialog('personDialog')">关闭</button></div></dialog>
+
+  <dialog id="reportDialog" aria-labelledby="reportHead"><div class="dhead"><h2 id="reportHead">结案报告</h2><button aria-label="关闭" onclick="closeDialog('reportDialog')">×</button></div><div id="reportBody" class="dbody"></div><div class="dfoot"><button onclick="closeDialog('reportDialog')">关闭</button></div></dialog>
+
+  <dialog id="originDialog" aria-labelledby="originHead"><div class="dhead"><h2 id="originHead">从哪儿起步</h2><button aria-label="关闭" onclick="closeDialog('originDialog')">×</button></div><div id="originBody" class="dbody"></div><div class="dfoot"><button onclick="closeDialog('originDialog')">再想想</button></div></dialog>
+
+  <dialog id="endingDialog" aria-labelledby="endingTitle"><div class="dhead"><h2 id="endingTitle">律所结局</h2><button aria-label="关闭" onclick="closeDialog('endingDialog')">×</button></div><div id="endingBody" class="dbody"></div><div class="dfoot"><button onclick="closeDialog('endingDialog')">继续经营</button><button class="primary" onclick="openOrigins()">重新开所</button></div></dialog>
+
+  <dialog id="helpDialog" aria-labelledby="helpHead"><div class="dhead"><h2 id="helpHead">执业说明</h2><button aria-label="关闭" onclick="closeDialog('helpDialog')">×</button></div><div class="dbody">
+    <p>每 10 秒推进一周，可以调 2 倍、4 倍速；想一周一周抠就点<b>单周</b>，走一周停一周（空格或右方向键同效）。办公场地依次允许同时办 1、2、3 个案子，但同一名律师不能同时进两个案组。</p>
+    <p><b>案子怎么走</b>：接案与方案 → 调查取证 → 论证与主攻 → 收尾交付，四个阶段。每个阶段吃不同的能力，也涨不同的维度：事实、法理、博弈、交付。四维决定最后的结案评级。</p>
+    <p><b>收费方案</b>（接案时定，定了不能改）：<br>· <b>固定收费</b>——签约收七成，结案收三成。稳，但案子办得再漂亮也不多给钱。<br>· <b>风险代理</b>——先收一成，结案按标的和结果分成。全胜爆赚，败诉基本白干。<br>· <b>计费小时</b>——每周按人头结算，现金流最平滑，但账单会一点点磨掉客户满意度。</p>
+    <p><b>每周指令</b>：在办案件每周可以下一条指令——加班赶工、死磕细节、团建安抚、控成本，或者放手。指令下了就一直执行，直到你改它或再点一次取消。<b>连续加班三周，组里会出事。</b></p>
+    <p><b>排期</b>：案子进到第三阶段要定开庭（或交割）窗口，可选未来六个月。11、12 月是结案潮，法院排得满，判决更保守，但媒体关注度高；3 月和 9 月最宽松。定完还能改一次期，在案件卡上点「改期」，代价是赔付已投入成本的 8%。</p>
+    <p><b>结案是赌出来的</b>：开庭前不会直接告诉你能拿几分，只给一个区间和把握度——「有把握 / 说不太准 / 心里没底 / 纯属赌博」。真结果要等宣判那天。<br>想把区间收窄：用等级高的老手、让固定搭档反复合作攒默契、成片前追加两周补强证据；反过来，赶出来的案子、让疲劳的人硬扛、小所硬接超出本事的大案，区间只会越拉越宽。</p>
+    <p><b>客户</b>：结案评级高，客户关系就涨。老客户再来找你时，收费能上浮 15–30%。办结「常年法律顾问」类案件且评级 6 分以上，会自动转成常年顾问合同——每月固定进账，不占案子名额，但要占一个人。</p>
+    <p><b>执业红线</b>：这是唯一能直接弄死你的数值，0 到 100，战略页一直挂着。伪造证据、不披露利益冲突、替客户垫诉讼费、向客户拍胸脯保结果……每一次越线都往上加。40 以上司法局会发风险提示，65 以上算被投诉，85 以上随时可能被责令停业整顿，<b>到 100 吊销执照，直接结束</b>。它每两个月自己降 4 点，降得比涨得慢得多。</p>
+    <p><b>声誉分两层</b>：行业声望管同行、法官和榜单认不认你，影响收费水平、能接到多大的案子、招得到什么人；社会知名度管老百姓知不知道你，影响上门委托的数量。两者都是越高涨得越慢。另外还有一条 0–100 的律所口碑，高分案件和获奖拉高它，败诉、被投诉、把人用到怨声载道拉低它，平时会慢慢向中位回落。</p>
+    <p><b>★名律师</b>：招聘名单里偶尔会出现带星的，各有专属特质——创收王（案子收费水平大涨）、学术权威（更容易上明镜榜、涨声望）、媒体宠儿（口碑收益更强）、万金油（结案评级明显提升）。名律师贵，签约金是普通人的两倍，还容易被对家约饭。</p>
+    <p><b>同行</b>：六家竞争律所会抢走案源市场上的委托、争明镜榜的位置，也会来挖你的人。他们自己也在长——十年下来，行业水位是会往上走的。</p>
+    <p><b>开局</b>：开所时可以选四种起点——大所出走（标准，带一个老客户）、法学院明星（声望高钱少）、家里出钱（钱多但每年被抽走，两年内必须交出成绩）、三人草台班子（钱少，前两案只能接小案）。</p>
+    <p>每年 2 月是明镜榜年度评选。经营到 2036 年按路线给出结局——红圈所、精品所、外所下包工厂、被合并退场，或者只是还开着。红线爆掉的话，不看别的，直接吊销。</p>
+  </div><div class="dfoot"><button class="primary" onclick="closeDialog('helpDialog')">开始执业</button></div></dialog>
+
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+  <script src="src/data.js"></script>
+  <script src="src/events.js"></script>
+  <script src="src/art.js"></script>
+  <script src="src/game.js"></script>
+</body>
+</html>
