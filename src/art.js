@@ -14,7 +14,7 @@ const ART={
   moods:['rain','hospital','press','night','sign','celebrate','empty','mediation'],
   // 立绘 512×640 webp，每个岗位当前可用张数
   // 现有 14 张为《开个影视公司》复用图，出了新图同名覆盖即可
-  portraitCount:{partner:2,litigator:2,corporate:2,associate:2,paralegal:2,bd:1,star:3}
+  portraitCount:{partner:2,litigator:2,corporate:2,associate:2,paralegal:2,bd:2,star:3}
 };
 const PHASE_SCENES=['phase-intake','phase-evidence','phase-argue','phase-close'];
 function artMiss(img){const box=img.parentNode;if(box)box.classList.add('no-art');img.remove()}
