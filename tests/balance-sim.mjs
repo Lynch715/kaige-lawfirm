@@ -76,6 +76,13 @@ const STRATS={
       const r=ev.choices.findIndex(c=>c.risk);
       if(r>=0&&S.risk<75)return r;
       const s=ev.choices.findIndex(c=>!c.risk);return s<0?0:s}},
+  // 会管理的越线者：只在风险还低的时候走捷径，绝不让它爬到通知线附近
+  越线派:{origin:'spinoff',plan:c=>c.scale==='small'?'hourly':'risk',effort:()=>'heavy',
+    order:()=>'quality',compliance:true,manageAt:45,
+    choose:(ev,S)=>{
+      const r=ev.choices.findIndex(c=>c.risk);
+      if(r>=0&&S.risk<58)return r;
+      const s=ev.choices.findIndex(c=>!c.risk);return s<0?0:s}},
   // 和「混合」完全一样，只多一个行为：红线过 55 就收手，等它降下来再说。
   // 这条是用来验证反馈回路能不能用的——真人是看得见那根条的。
   看红线:{origin:'spinoff',plan:c=>c.scale==='small'?'hourly':(Math.random()<.4?'risk':'fixed'),
@@ -170,7 +177,8 @@ const pct=(a,b)=>b?((a/b*100).toFixed(0)+'%'):'—';
 const med=a=>{if(!a.length)return 0;const s=[...a].sort((x,y)=>x-y);return s[Math.floor(s.length/2)]};
 const avg=a=>a.length?a.reduce((x,y)=>x+y,0)/a.length:0;
 
-for(const name of Object.keys(STRATS)){
+const ONLY=process.argv.slice(3);
+for(const name of Object.keys(STRATS).filter(n=>!ONLY.length||ONLY.includes(n))){
   const rs=[];
   for(let i=0;i<RUNS;i++)rs.push(runOne(name));
   const allScores=rs.flatMap(r=>r.scores);

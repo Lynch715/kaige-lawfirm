@@ -197,8 +197,10 @@ function addRisk(n,why){
   if(S.risk>=100&&!S.over)showEnding('revoked');
 }
 function processRisk(){
+  // 被下过限期整改通知，就在律协那里挂了号：往后每一次自查都更细，
+  // 自然回落也就更慢。这是个棘轮——能往下扳，但扳不回原来的松紧。
   if(S.week%RISK_DECAY_WEEKS===0&&S.week>0&&S.risk>0){
-    S.risk=clamp(S.risk-RISK_DECAY,0,100);
+    S.risk=clamp(S.risk-Math.max(1,RISK_DECAY-Math.min(2,S.flags.notices||0)),0,100);
   }
   // 口碑每季度向中位回归一点，热度是会退的
   if(S.week%13===0&&S.week>0)addBuzz((50-S.buzz)*.08);
@@ -210,10 +212,25 @@ function processRisk(){
     return;
   }
   // ── 85 档：不再是直接停业，先下限期整改通知，留六周窗口 ──
+  // 三年没再出事，最早的那次通知就从考核口径里划掉了
+  if(S.flags.notices&&S.week-(S.flags.noticeAt||0)>=156){
+    S.flags.notices--;S.flags.noticeAt=S.week;
+    if(!S.flags.notices)addNews('律协','三年无新增执业投诉，之前的整改记录已从考核口径中移出。');
+  }
   if(S.risk>=85&&!S.rectify&&!S.suspendUntil){
-    S.rectify=S.week+6;
-    addNews('司法局','收到限期整改通知：六周内把执业风险降到 85 以下，否则责令停业整顿。');
-    chron('收到限期整改通知。');
+    const n=(S.flags.notices||0)+1;S.flags.notices=n;S.flags.noticeAt=S.week;
+    const win=n===1?6:n===2?4:3;
+    S.rectify=S.week+win;
+    if(n===1){
+      addNews('司法局',`收到限期整改通知：${win} 周内把执业风险降到 85 以下，否则责令停业整顿。`);
+      chron('收到限期整改通知。');
+    }else{
+      // 第二次起就不只是通知了，随文附一张罚单，人也开始跟着跑
+      const fine=Math.round(Math.max(120000,(rentNow()+S.staff.reduce((a,e)=>a+e.salary,0))*1.5)/1000)*1000;
+      S.money-=fine;S.prestige=Math.max(0,S.prestige-2);addBuzz(-6);
+      addNews('司法局',`第 ${n} 次限期整改通知，附行政处罚决定书，罚款 ${money(fine)}。整改期缩到 ${win} 周。`);
+      chron(`第 ${n} 次收到限期整改通知，罚款 ${money(fine)}。`);
+    }
     setSpeed(0);toast('司法局下了限期整改通知');
   }
   if(S.rectify&&S.week>=S.rectify){
@@ -807,6 +824,31 @@ function startCase(){
 }
 
 // ── 事件 ────────────────────────────────────────────────────
+// ── 越线的红利 ──────────────────────────────────────────────
+// 越线不能只是「有风险」，它得真的划算。否则玩家学两局就永远选安全选项，
+// 一半的抉择内容变成死重（第三期的模拟对照组就是这么暴露的：
+// 敢越线又会整改的打法，在每个维度上都不如从不越线的）。
+// 规则：省掉的合规流程本身就是收益——花费打六折，另外按风险值折算一份额外收益。
+// 风险越大给得越多，红线由此成为一种可以交易的资源，而不只是惩罚条。
+const SHORTCUT_DISCOUNT=.82,SHORTCUT_K=.78,SHORTCUT_CASH=17000,SHORTCUT_PROG=1.15;
+function shortcutGain(ch,ctx){
+  if(!ch.risk)return null;
+  const c=ctx&&ctx.c;
+  if(c&&c.quality&&!c.score){                 // 在办的案子：补上最短的那一维，顺带抢出时间
+    const k=QUALITIES.map(q=>q[0]).reduce((a,b)=>c.quality[a]<=c.quality[b]?a:b);
+    const n=Math.round(ch.risk*SHORTCUT_K);
+    const pg=Math.round(ch.risk*SHORTCUT_PROG);
+    return {text:`${QUALITIES.find(q=>q[0]===k)[1]} +${n}，进度 +${pg}%`,
+      run:()=>{addQ(c,k,n);c.prog=clamp(c.prog+pg,0,99)}};
+  }
+  const cash=Math.round(ch.risk*SHORTCUT_CASH/1000)*1000;
+  return {text:`另进账 ${money(cash)}`,run:()=>{S.money+=cash}};
+}
+// 带越线的选项，标价和实际扣款都按六折算——显示和扣的必须是同一个数
+function choiceCost(ch,ctx){
+  const raw=typeof ch.cost==='function'?ch.cost(ctx):(ch.cost||0);
+  return ch.risk&&raw>0?Math.round(raw*SHORTCUT_DISCOUNT):raw;
+}
 function evtReady(ev,ctx){
   if(S.evtCd[ev.id]&&S.week-S.evtCd[ev.id]<(ev.cooldown||30))return false;
   if(ev.phase!==undefined&&ev.phase!==null&&ctx.c&&ctx.c.phase!==ev.phase)return false;
@@ -860,12 +902,16 @@ function fireEvent(ev,ctx){
     ev.choices.map((ch,i)=>{
       const label=typeof ch.label==='function'?ch.label(ctx):ch.label;
       const note=typeof ch.note==='function'?ch.note(ctx):(ch.note||'');
-      const cost=typeof ch.cost==='function'?ch.cost(ctx):(ch.cost||0);
+      const cost=choiceCost(ch,ctx);
+      const raw=typeof ch.cost==='function'?ch.cost(ctx):(ch.cost||0);
+      const saved=raw>0?raw-cost:0;
       const can=cost<=0||S.money>=cost;
+      const g=shortcutGain(ch,ctx);
       return `<button class="choice" ${can?'':'disabled'} onclick="resolveEvent(${i})">
         <b>${esc(label)}</b>${cost?` <span class="tag${cost>0?'':' green'}">${cost>0?'花费 '+money(cost):'进账 '+money(-cost)}</span>`:''}
-        ${ch.risk?` <span class="tag red">执业风险 +${ch.risk}</span>`:''}
-        ${note?`<small>${esc(note)}</small>`:''}</button>`;
+        ${ch.risk?` <span class="tag red">执业红线 +${ch.risk}</span>`:''}
+        ${note?`<small>${esc(note)}</small>`:''}
+        ${g?`<small class="shortcut">走捷径：${g.text}${saved?`　合规流程省下 ${money(saved)}`:''}</small>`:''}</button>`;
     }).join('');
   byId('eventSkipBtn').classList.toggle('hidden',!ev.onSkip);
   openDialog('eventDialog');
@@ -873,11 +919,13 @@ function fireEvent(ev,ctx){
 function resolveEvent(i){
   if(!curEvent)return;
   const {ev,ctx}=curEvent,ch=ev.choices[i];
-  const cost=typeof ch.cost==='function'?ch.cost(ctx):(ch.cost||0);
+  const cost=choiceCost(ch,ctx);
   if(cost>0&&S.money<cost){toast('账上不够');return}
   S.money-=cost;
+  const gain=shortcutGain(ch,ctx);
   if(ch.risk)addRisk(ch.risk,`《${ctx.c?ctx.c.name:S.firm}》：${typeof ch.label==='function'?ch.label(ctx):ch.label}`);
   if(ch.apply)ch.apply(ctx);
+  if(gain)gain.run();
   curEvent=null;closeDialog('eventDialog');resumeAfterModal();render();
 }
 function skipEvent(){
