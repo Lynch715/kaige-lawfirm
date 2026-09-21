@@ -40,7 +40,7 @@ function makeCtx(){
   const bridge=`
   globalThis.__api={
     get S(){return S}, set S(v){S=v},
-    KEY,VERSION,OFFICES,scaleDefs,PHASES,QUALITIES,FEES,EFFORTS,DEPTS,CASE_TYPES,
+    KEY,VERSION,OFFICES,scaleDefs,PHASES,QUALITIES,FEES,EFFORTS,DEPTS,CASE_TYPES,ORIGINS,dailyWork,dailyEstimate,person,
     RISK_DECAY,RISK_DECAY_WEEKS,RISK_TIERS,EVENTS,CHAINS,NEWSFEED,ART,roles,GOALS,ACHIEVEMENTS,
     free,pick,clamp,teamOf,
     newGame,tickWeek,closeCase,addRisk,riskTier,addBuzz,
@@ -61,7 +61,7 @@ group('开局');
   g.newGame('spinoff');
   const S=g.S;
   ok('S 建立',!!S);
-  ok('起始资金 300 万',S.money===3000000,S&&S.money);
+  ok('起始资金等于开局设定',S.money===g.ORIGINS.spinoff.money,`${S&&S.money} vs ${g.ORIGINS.spinoff.money}`);
   ok('大所出走带 6 人班底',S.staff.length===6,S&&S.staff.length);
   ok('带走一个老客户',S.clients.length===1);
   ok('案源市场有货',S.leads.length>=3,S&&S.leads.length);
@@ -71,6 +71,41 @@ group('开局');
   const g2=makeCtx();g2.newGame('three');
   ok('草台班子只有 3 人',g2.S.staff.length===3,g2.S.staff.length);
   ok('前两案限定小案',g2.S.leads.every(l=>l.scale==='small'));
+}
+
+// ── 1b. 日常业务收入 ──────────────────────────────────────
+group('日常业务');
+{
+  const g=makeCtx();g.newGame('spinoff');
+  const before=g.S.money;
+  const got=g.dailyWork();
+  ok('闲置律师每周带来零散业务收入',got>0,got);
+  ok('钱真的进账了',g.S.money===before+got);
+  // 全员进专案组之后就没有零散收入了
+  g.S.active.push({id:1,team:g.S.staff.map(e=>e.id),name:'x',quality:{fact:0,law:0,deal:0,work:0},
+    type:'contract',dept:'lit',scale:'major',feePlan:'fixed',effort:'normal',phase:0,prog:0,
+    weeks:0,cost:0,paidIn:0,fee:1,sat:70,clientName:'x',brief:'',title:''});
+  ok('人全在专案里就没有零散收入',g.dailyWork()===0);
+  // 停业整顿期间也没有
+  g.S.active=[];g.S.suspendUntil=g.S.week+4;
+  ok('停业整顿期间没有零散收入',g.dailyWork()===0);
+  g.S.suspendUntil=0;
+  // 零散业务取「人手」和「案源上限」里的小的那个
+  // 人少的时候人手是瓶颈：堆知名度没用
+  g.S.staff=g.S.staff.slice(0,2);
+  const few=g.dailyWork();
+  g.S.fame=40;g.S.prestige=60;
+  ok('人手不够时，堆知名度也接不到更多零散活',Math.abs(g.dailyWork()-few)<1,`${few} → ${g.dailyWork()}`);
+  // 人多的时候案源是瓶颈：再招人也不涨，但知名度能打开上限
+  g.S.fame=1;g.S.prestige=2;                 // 先把案源上限压回开局水平
+  while(g.S.staff.length<16)g.S.staff.push(g.person('associate',3));
+  const many=g.dailyWork();
+  ok('人堆上去之后会被案源上限卡住',g.S.flags.dailyCapped===true);
+  const n0=g.S.staff.length;
+  for(let i=0;i<6;i++)g.S.staff.push(g.person('associate',3));
+  ok('卡住之后再招人也不涨',g.dailyWork()===many,`${n0}人 ${many} → ${g.S.staff.length}人 ${g.dailyWork()}`);
+  g.S.fame=80;g.S.office=2;
+  ok('但知名度和场地能把案源上限撑开',g.dailyWork()>many*1.5,`${many} → ${g.dailyWork()}`);
 }
 
 // ── 2. 长时间推进不炸 ──────────────────────────────────────

@@ -31,7 +31,7 @@ function person(role,lv){
     trait:pick(traits),energy:ri(72,96),star:false,face:null,salary:0,weeks:0};
   e.stats={};STATS.forEach(([k])=>{e.stats[k]=clamp(Math.round(base*rnd(.55,.95)),3,26)});
   e.stats[roles[role][1]]=clamp(Math.round(base*rnd(1.0,1.35)),5,30);
-  e.salary=Math.round((7000+e.level*5200+e.stats[roles[role][1]]*680)/100)*100;
+  e.salary=Math.round((2200+e.level*2600+e.stats[roles[role][1]]*340)/100)*100;
   e.face=pickFace(role,false);
   return e;
 }
@@ -200,7 +200,7 @@ function tickWeek(){
   if(S.over)return;
   S.week++;
   if(S.suspendUntil&&S.week>=S.suspendUntil){S.suspendUntil=0;addNews('司法局','停业整顿期满，律所恢复执业。')}
-  monthlyCosts();
+  monthlyCosts();dailyWork();
   if(!S.suspendUntil){processCases();processEvents()}
   processStaff();processPending();processRisk();processTrend();processRivals();
   if(S.week%4===0)refreshLeads();
@@ -230,6 +230,26 @@ function processStaff(){
     if(e.weeks%52===0&&e.level<5&&Math.random()<.32){e.level++;STATS.forEach(([k])=>e.stats[k]+=ri(1,3));
       addNews('团队',`${e.name}的执业年限又长了一年，能力有提升。`)}
   });
+}
+// 日常业务：没进专案组的人不是白养着——接零散咨询、小额纠纷、文书代写。
+// 真实律所大部分流水来自这块，管线上那 1~3 个专案是挣利润和名声的。
+// 没有这条，把委托费压到真实水平之后账根本平不了，玩家的最优解会变成「把人裁到刚好够用」。
+// 纯计算，没有副作用——界面直接调它，所以把人派进案组的当下数字就变了，不用等下一周
+function dailyEstimate(){
+  if(!S||S.suspendUntil)return {sum:0,capped:false};
+  const idle=S.staff.filter(free);
+  if(!idle.length)return {sum:0,capped:false};
+  // 人手能干多少
+  let manpower=0;
+  idle.forEach(e=>{manpower+=(1200+e.level*1700)*(0.6+0.4*e.energy/100)});
+  // 但零散活是案源封顶的，不是人多就能接更多——这条上限随知名度、声望和场地成长
+  const cap=(24000+S.fame*3000+S.prestige*1200)*(1+S.office*.45);
+  return {sum:Math.round(Math.min(manpower,cap)),capped:manpower>cap};
+}
+function dailyWork(){
+  const {sum,capped}=dailyEstimate();
+  S.money+=sum;S.flags.daily=sum;S.flags.dailyCapped=capped;
+  return sum;
 }
 function payRetainers(){
   if(!S.retainers.length)return;
@@ -654,8 +674,8 @@ function makeCandidates(){
   return list;
 }
 function refreshCandidates(){
-  if(S.money<80000){toast('账上不够');return}
-  S.money-=80000;S.candidates=makeCandidates();renderRecruit();render();
+  if(S.money<25000){toast('账上不够');return}
+  S.money-=25000;S.candidates=makeCandidates();renderRecruit();render();
 }
 function renderRecruit(){
   byId('recruitBody').innerHTML=S.candidates.map(e=>{
@@ -717,13 +737,13 @@ function upgradeOffice(){
 // ── 自救 ────────────────────────────────────────────────────
 function takeLoan(){
   if(S.loan){toast('还有贷款没还完');return}
-  S.loan={per:320000,left:36};S.money+=10000000;
-  addNews('财务','向银行借了 1000 万，三年内每月还 32 万。');render();save();
+  S.loan={per:63000,left:36};S.money+=2000000;
+  addNews('财务','向银行借了 200 万，三年内每月还 6.3 万。');render();save();
 }
 function openGig(){
   const idle=S.staff.filter(free);
   if(idle.length<2){toast('至少要两个闲着的人');return}
-  const pay=Math.round(450000*(1+S.prestige*.03));
+  const pay=Math.round(120000*(1+S.prestige*.03));
   if(!confirm(`接一单六周的法律文书外包，占用两名闲置律师，结款 ${money(pay)}。接吗？`))return;
   S.money+=pay;idle.slice(0,2).forEach(e=>e.energy=clamp(e.energy-18,0,100));
   addNews('财务',`接了一单文书外包，结款 ${money(pay)}。`);render();save();
@@ -846,9 +866,9 @@ function renderTrend(){
   byId('trendPanel').innerHTML=`<small>当前市场风向</small><b>${t[0]}</b><small>${t[1]}</small>`;
 }
 function statCards(){
-  const tier=riskTier();
+  const tier=riskTier(),dy=dailyEstimate();
   return `<div class="stats">
-    <div class="stat card${S.money<0?' danger':''}"><label>账面现金</label><b>${money(S.money)}</b><small>月开支约 ${money(OFFICES[S.office].rent+S.staff.reduce((a,e)=>a+e.salary,0))}</small></div>
+    <div class="stat card${S.money<0?' danger':''}"><label>账面现金</label><b>${money(S.money)}</b><small>月开支 ${wan(OFFICES[S.office].rent+S.staff.reduce((a,e)=>a+e.salary,0))} · 日常业务 +${wan(dy.sum)}/周${dy.capped?' · 案源已满':''}</small></div>
     <div class="stat card"><label>行业声望</label><b>${S.prestige.toFixed(1)}</b><small>同行与法院</small></div>
     <div class="stat card"><label>社会知名度</label><b>${S.fame.toFixed(1)}</b><small>上门委托</small></div>
     <div class="stat card"><label>律所口碑</label><b>${Math.round(S.buzz)}</b><small>${buzzLabel(S.buzz)}</small></div>
@@ -999,7 +1019,7 @@ function renderStrategy(){
    </section>
    <section class="card section"><h2>周转不开的时候</h2>
      <div class="operation-grid">
-       <button onclick="takeLoan()" ${S.loan?'disabled':''}>${S.loan?`贷款还剩 ${S.loan.left} 个月`:'银行借 1000 万'}</button>
+       <button onclick="takeLoan()" ${S.loan?'disabled':''}>${S.loan?`贷款还剩 ${S.loan.left} 个月`:'银行借 200 万'}</button>
        <button onclick="openGig()">接一单文书外包</button>
        <button onclick="showPage('leads')">去案源市场转介</button>
      </div>

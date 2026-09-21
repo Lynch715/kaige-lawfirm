@@ -67,9 +67,9 @@ const EVENTS=[
  title:'证人愿意来，但开口要钱',
  text:x=>`《${x.c.name}》唯一能说清那天现场情况的人找到了。他说他愿意作证，"但我得请三天假，你们看着办"。`,
  choices:[
-  {label:'只付误工和交通，开票据',cost:26000,note:'事实 +6',
+  {label:'只付误工和交通，开票据',cost:8000,note:'事实 +6',
    apply:x=>{Q(x.c,'fact',6)}},
-  {label:'给他一笔，让他把话说得更到位',cost:170000,risk:16,note:'事实 +13 · 证言可信度是个雷',
+  {label:'给他一笔，让他把话说得更到位',cost:50000,risk:16,note:'事实 +13 · 证言可信度是个雷',
    apply:x=>{Q(x.c,'fact',13);queueChain('evidence',x.c)}}],
  onSkip:x=>{Q(x.c,'fact',-4);addNews('取证','证人最后没来。')}},
 
@@ -77,7 +77,7 @@ const EVENTS=[
  title:'那段录音是偷录的',
  text:x=>`客户交上来一段录音，对方在里面亲口承认了。问题是，这是在人家办公室里偷录的。`,
  choices:[
-  {label:'评估合法性，能用就用，不能用就放弃',cost:45000,note:'法理 +6 · 事实 +4',
+  {label:'评估合法性，能用就用，不能用就放弃',cost:14000,note:'法理 +6 · 事实 +4',
    apply:x=>{Q(x.c,'law',6);Q(x.c,'fact',4)}},
   {label:'直接当证据提交，赌法官不细究',risk:10,note:'事实 +10 · 可能被当庭排除',
    apply:x=>{Q(x.c,'fact',10);queueChain('evidence',x.c)}}],
@@ -99,9 +99,9 @@ const EVENTS=[
  choices:[
   {label:'等',note:'多耗两周，法理 +4',
    apply:x=>{x.c.weeks+=2;Q(x.c,'law',4)}},
-  {label:'加急费插队',cost:320000,note:'事实 +9 · 不耽误排期',
+  {label:'加急费插队',cost:95000,note:'事实 +9 · 不耽误排期',
    apply:x=>{Q(x.c,'fact',9)}},
-  {label:'换一家出得快的机构',cost:85000,risk:8,note:'事实 +6 · 这家的报告对方肯定要质疑',
+  {label:'换一家出得快的机构',cost:26000,risk:8,note:'事实 +6 · 这家的报告对方肯定要质疑',
    apply:x=>{Q(x.c,'fact',6)}}],
  onSkip:x=>{x.c.weeks+=2}},
 
@@ -109,7 +109,7 @@ const EVENTS=[
  title:'关键证据在境外',
  text:x=>`最关键的那份文件在境外，要用就得走公证认证，一来一回六周起步。`,
  choices:[
-  {label:'走完整流程',cost:190000,note:'事实 +8 · 交付 +5 · 多耗三周',
+  {label:'走完整流程',cost:58000,note:'事实 +8 · 交付 +5 · 多耗三周',
    apply:x=>{Q(x.c,'fact',8);Q(x.c,'work',5);x.c.weeks+=3}},
   {label:'先用复印件，认证件后补',risk:9,note:'事实 +5 · 对方一定会打形式要件',
    apply:x=>{Q(x.c,'fact',5)}}],
@@ -135,7 +135,7 @@ const EVENTS=[
    apply:x=>{Q(x.c,'work',9);Q(x.c,'deal',5)}},
   {label:'明确表示当事人要判决',note:'法理 +8 · 排期可能往后拖',
    apply:x=>{Q(x.c,'law',8);if(Math.random()<.4){x.c.weeks+=2;addNews('排期',`《${x.c.name}》的开庭往后挪了。`)}}},
-  {label:'托人问问法官的倾向',cost:220000,risk:22,note:'博弈 +14 · 这条线碰不得',
+  {label:'托人问问法官的倾向',cost:65000,risk:22,note:'博弈 +14 · 这条线碰不得',
    apply:x=>{Q(x.c,'deal',14)}}],
  onSkip:x=>{Q(x.c,'work',3)}},
 
@@ -145,7 +145,7 @@ const EVENTS=[
  choices:[
   {label:'连夜重做',note:'法理 +10 · 全组体力 -8',
    apply:x=>{Q(x.c,'law',10);EN(TEAM(x.c),-8)}},
-  {label:'外聘一位学者出意见书',cost:380000,note:'法理 +14',
+  {label:'外聘一位学者出意见书',cost:115000,note:'法理 +14',
    apply:x=>{Q(x.c,'law',14);addNews('办案',`《${x.c.name}》请了一位学者出专家意见。`)}},
   {label:'把那段删掉，不提了',note:'法理 +2',
    apply:x=>{Q(x.c,'law',2)}}],
@@ -155,7 +155,7 @@ const EVENTS=[
  title:'对方换律师了',
  text:x=>{const r=pick(S.rivals);return `开庭前两周，对方换了代理人——${r.name}的人接了。这家在庭上出了名的不好对付。`},
  choices:[
-  {label:'加派一名资深律师上庭',cost:260000,note:'法理 +8 · 博弈 +6',
+  {label:'加派一名资深律师上庭',cost:80000,note:'法理 +8 · 博弈 +6',
    apply:x=>{Q(x.c,'law',8);Q(x.c,'deal',6)}},
   {label:'做三轮模拟法庭',note:'博弈 +11 · 全组体力 -10',
    apply:x=>{Q(x.c,'deal',11);EN(TEAM(x.c),-10)}},
@@ -241,7 +241,7 @@ const EVENTS=[
  choices:[
   {label:'加薪留人',cost:0,note:'那个人月薪 +25%',
    apply:x=>{const e=pick(S.staff);e.salary=Math.round(e.salary*1.25);addNews('团队',`给${e.name}加了薪，人留下了。`)}},
-  {label:'给分红，绑长期',cost:430000,note:'留人，口碑 +4',
+  {label:'给分红，绑长期',cost:130000,note:'留人，口碑 +4',
    apply:x=>{addBuzz(4);addNews('团队','把分红方案摆上桌，人心稳了些。')}},
   {label:'留不住就算了',note:'可能走人',
    apply:x=>{if(S.staff.length>2&&Math.random()<.55){const e=pick(S.staff.filter(free));
@@ -253,7 +253,7 @@ const EVENTS=[
  title:'司法局来所里做执业检查',
  text:x=>`例行检查，看归档、看收费、看冲突检索记录。带队的那位翻得很细。`,
  choices:[
-  {label:'配合，该补的补',cost:130000,note:'执业红线 -8',
+  {label:'配合，该补的补',cost:40000,note:'执业红线 -8',
    apply:x=>{addRisk(-8);addNews('司法局','检查通过，整改意见当场签收。')}},
   {label:'把该藏的先收起来',risk:10,note:'省事，但记录更花',
    apply:x=>{addNews('司法局','检查走了个过场。')}}],
@@ -265,7 +265,7 @@ const EVENTS=[
  choices:[
   {label:'谢了，但这种不接',note:'声望 +1',
    apply:x=>{S.prestige+=1;addNews('案源','回绝了一笔带回扣的介绍。')}},
-  {label:'接，按他说的走账',cost:-1700000,risk:20,note:'进账 170 万 · 这笔钱有味道',
+  {label:'接，按他说的走账',cost:-500000,risk:20,note:'进账 50 万 · 这笔钱有味道',
    apply:x=>{addNews('案源','那笔介绍来的活接了，钱也返了。')}}],
  onSkip:x=>{}},
 
@@ -273,7 +273,7 @@ const EVENTS=[
  title:'一个明显赢不了的案子',
  text:x=>`有人找上门，案子本身几乎没有胜算，但社会关注度极高，做了整个行业都会知道你们。`,
  choices:[
-  {label:'接，当公益案件做',cost:320000,note:'声望 +3 · 知名度 +2.5 · 口碑 +10',
+  {label:'接，当公益案件做',cost:95000,note:'声望 +3 · 知名度 +2.5 · 口碑 +10',
    apply:x=>{S.prestige+=3;S.fame+=2.5;addBuzz(10);chron('接了一个明知赢不了的案子。')}},
   {label:'不接，律所不是做慈善的',note:'什么也没发生',
    apply:x=>{}}],
@@ -284,7 +284,7 @@ const EVENTS=[
  title:'想去读在职法硕',
  text:x=>`${x.e.name}来谈，想读个在职法硕，周末要上课，手上的活得减一些。`,
  choices:[
-  {label:'支持，学费所里出一半',cost:130000,note:'两项能力 +3，体力 +10',
+  {label:'支持，学费所里出一半',cost:40000,note:'两项能力 +3，体力 +10',
    apply:x=>{const ks=STATS.map(s=>s[0]).sort(()=>Math.random()-.5).slice(0,2);
      ks.forEach(k=>x.e.stats[k]+=3);x.e.energy=Math.min(100,x.e.energy+10);
      addNews('团队',`${x.e.name}去读在职法硕了。`)}},
@@ -309,7 +309,7 @@ const EVENTS=[
  choices:[
   {label:'摊开谈，问他想要什么',note:'留人，口碑 +3',
    apply:x=>{addBuzz(3);addNews('团队',`跟${x.e.name}谈了一下午。`)}},
-  {label:'直接给股权',cost:850000,note:'彻底绑住，声望 +2',
+  {label:'直接给股权',cost:250000,note:'彻底绑住，声望 +2',
    apply:x=>{S.prestige+=2;addNews('团队',`${x.e.name}成了权益合伙人。`)}},
   {label:'装作不知道',note:'可能走人',
    apply:x=>{if(Math.random()<.45&&free(x.e)){S.staff=S.staff.filter(y=>y.id!==x.e.id);
@@ -349,7 +349,7 @@ const CHAINS={
   choices:[
    {label:'让他休，活分给别人',note:'全组体力 -6，交付 -5',
     apply:x=>{EN(TEAM(x.c),-6);Q(x.c,'work',-5)}},
-   {label:'外聘一位律师顶上',cost:430000,note:'不掉进度',
+   {label:'外聘一位律师顶上',cost:130000,note:'不掉进度',
     apply:x=>{addNews('团队','临时外聘了一位律师顶上。')}}],
   onSkip:x=>{EN(TEAM(x.c),-14);Q(x.c,'work',-10);addBuzz(-4)}}
 };

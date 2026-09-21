@@ -61,6 +61,16 @@ const STRATS={
       const risky=ev.choices.findIndex(c=>c.risk);
       if(risky>=0&&Math.random()<.25)return risky;
       const safe=ev.choices.findIndex(c=>!c.risk);
+      return safe<0?0:safe}},
+  // 和「混合」完全一样，只多一个行为：红线过 55 就收手，等它降下来再说。
+  // 这条是用来验证反馈回路能不能用的——真人是看得见那根条的。
+  看红线:{origin:'spinoff',plan:c=>c.scale==='small'?'hourly':(Math.random()<.4?'risk':'fixed'),
+    effort:c=>c.scale==='small'?'normal':'heavy',
+    order:()=>Math.random()<.35?'care':'quality',
+    choose:(ev,S)=>{
+      const risky=ev.choices.findIndex(c=>c.risk);
+      if(risky>=0&&S.risk<55&&Math.random()<.25)return risky;
+      const safe=ev.choices.findIndex(c=>!c.risk);
       return safe<0?0:safe}}
 };
 
@@ -73,7 +83,7 @@ function runOne(name,S_){
     // 处理挂起的事件
     let guard=0;
     while(g.curEvent&&guard++<5){
-      const ev=g.curEvent.ev,i=st.choose(ev);
+      const ev=g.curEvent.ev,i=st.choose(ev,g.S);
       if(i===null||i===undefined){ if(ev.onSkip)g.skipEvent(); else g.resolveEvent(0) }
       else{
         const ch=ev.choices[i];

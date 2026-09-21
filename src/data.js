@@ -55,9 +55,9 @@ const typeById=id=>CASE_TYPES.find(t=>t.id===id);
 
 // 规模三档
 const scaleDefs={
-  small:{name:'小案',     base:350000,  weeks:8,  need:2, cap:7.5},
-  major:{name:'大案',     base:1700000, weeks:18, need:3, cap:9.2},
-  mega: {name:'长期项目', base:5000000, weeks:32, need:4, cap:9.5}
+  small:{name:'小案',     base:80000,   weeks:8,  need:2, cap:7.5},
+  major:{name:'大案',     base:450000,  weeks:18, need:3, cap:9.2},
+  mega: {name:'长期项目', base:1500000, weeks:32, need:4, cap:9.5}
 };
 
 // 四阶段：stat 决定推进速度，quality 决定这阶段涨哪个维度
@@ -79,7 +79,7 @@ const FEES={
   hourly:{name:'计费小时',up:.10,end:.25,resultK:.10,hourly:1,
     desc:'每周按人头结算，现金流最平滑；账单会一点点磨掉客户满意度。'}
 };
-const HOUR_RATE=22000; // 每人每周计费
+const HOUR_RATE=5500; // 每人每周计费
 
 // 办案投入档
 const EFFORTS={
@@ -99,15 +99,15 @@ const ORDERS={
 
 // ── 场地与设施 ──────────────────────────────────────────────
 const OFFICES=[
-  {name:'写字楼隔断间',room:'三张桌子一台打印机',    rent:50000, cap:8, slots:1,upgrade:2600000,desc:'一个案组独立推进，先办出一个像样的代表案。'},
-  {name:'整层办公区',  room:'独立会客室',            rent:120000,cap:12,slots:2,upgrade:7000000,desc:'两条案线并行，要在人手和排期之间取舍。'},
-  {name:'CBD 自有楼层',room:'两间会议室 + 模拟法庭',rent:250000,cap:18,slots:3,upgrade:null,   desc:'三条案线并行，真正按组合经营一家所。'}
+  {name:'写字楼隔断间',room:'三张桌子一台打印机',    rent:8000,  cap:8, slots:1,upgrade:1500000,desc:'一个案组独立推进，先办出一个像样的代表案。'},
+  {name:'整层办公区',  room:'独立会客室',            rent:28000, cap:12,slots:2,upgrade:4500000,desc:'两条案线并行，要在人手和排期之间取舍。'},
+  {name:'CBD 自有楼层',room:'两间会议室 + 模拟法庭',rent:75000, cap:18,slots:3,upgrade:null,   desc:'三条案线并行，真正按组合经营一家所。'}
 ];
 const facilities=[
-  ['db',   '案例数据库',    '收尾交付推进 +10%，结案评级 +0.12',       3200000],
-  ['room', '独立会客层',    '接案阶段推进 +10%，客户满意度 +8，结案评级 +0.10',5400000],
-  ['risk', '内部合规风控岗','所有执业风险涨幅 ×0.65',                  7500000],
-  ['court','模拟法庭室',    '主攻阶段推进 +12%，诉讼类案件结案评级 +0.30',9800000]
+  ['db',   '案例数据库',    '收尾交付推进 +10%，结案评级 +0.12',       1000000],
+  ['room', '独立会客层',    '接案阶段推进 +10%，客户满意度 +8，结案评级 +0.10',1600000],
+  ['risk', '内部合规风控岗','所有执业风险涨幅 ×0.65',                  2200000],
+  ['court','模拟法庭室',    '主攻阶段推进 +12%，诉讼类案件结案评级 +0.30',3000000]
 ];
 
 // ── 市场 ────────────────────────────────────────────────────
@@ -191,28 +191,28 @@ const MAX_POLISH=2;
 // ── 开局 ────────────────────────────────────────────────────
 const ORIGINS={
   spinoff:{name:'大所出走',line:'带走一个老客户和一名资深律师。原所的竞业条款还没过，前两个案子接不到上市公司。',
-    money:3000000,fame:1,prestige:2,tag:'标准',noListed:2},
+    money:900000,fame:1,prestige:2,tag:'标准',noListed:2},
   scholar:{name:'法学院明星',line:'论文比案子多。同行敬你三分，客户不知道你是谁。声望高，钱少。',
-    money:1200000,fame:0,prestige:6,tag:'声望流'},
-  funded: {name:'家里出钱',line:'启动资金到位，代价是每年被抽走一百五十万，两年内要交出一件像样的案子。',
-    money:8000000,fame:.5,prestige:0,levy:1500000,deadline:104,tag:'高压'},
+    money:360000,fame:0,prestige:6,tag:'声望流'},
+  funded: {name:'家里出钱',line:'启动资金到位，代价是每年被抽走四十五万，两年内要交出一件像样的案子。',
+    money:2400000,fame:.5,prestige:0,levy:450000,deadline:104,tag:'高压'},
   three:  {name:'三人草台班子',line:'三个人一间隔断。前两个案子只能接小案，办砸就散伙。',
-    money:800000,fame:.3,prestige:0,small:true,smallOnly:2,tag:'困难'}
+    money:240000,fame:.3,prestige:0,small:true,smallOnly:2,tag:'困难'}
 };
 
 // ── 目标与成就 ──────────────────────────────────────────────
 const GOALS=[
-  {id:'first', name:'第一个案子',desc:'办结并收到第一笔律师费',            check:()=>S.cases.length>=1,             reward:()=>{S.money+=600000}, rw:'开办补贴 ¥600,000'},
+  {id:'first', name:'第一个案子',desc:'办结并收到第一笔律师费',            check:()=>S.cases.length>=1,             reward:()=>{S.money+=200000}, rw:'开办补贴 ¥200,000'},
   {id:'good',  name:'办出口碑',  desc:'办结一件评级 7.5 以上的案子',       check:()=>S.cases.some(c=>c.score>=7.5), reward:()=>{S.fame+=2},       rw:'社会知名度 +2'},
-  {id:'repeat',name:'回头客',    desc:'同一个客户委托你第 2 次',           check:()=>S.clients.some(c=>c.entries>=2),reward:()=>{S.money+=1200000},rw:'业务拓展金 ¥1,200,000'},
-  {id:'list',  name:'登上明镜榜',desc:'拿下任意一项明镜榜年度提名',        check:()=>!!S.flags.listed,              reward:()=>{S.money+=1500000}, rw:'榜单分红 ¥1,500,000'},
+  {id:'repeat',name:'回头客',    desc:'同一个客户委托你第 2 次',           check:()=>S.clients.some(c=>c.entries>=2),reward:()=>{S.money+=400000}, rw:'业务拓展金 ¥400,000'},
+  {id:'list',  name:'登上明镜榜',desc:'拿下任意一项明镜榜年度提名',        check:()=>!!S.flags.listed,              reward:()=>{S.money+=500000}, rw:'榜单分红 ¥500,000'},
   {id:'floor', name:'自己的楼层',desc:'升级到 CBD 自有楼层，开放三条案线', check:()=>S.office>=2,                   reward:()=>{S.prestige+=6},   rw:'行业声望 +6'},
   {id:'client',name:'客户版图',  desc:'五类客户资产总量达到 1,200',        check:()=>clientTotal()>=1200,           reward:()=>{S.fame+=3},       rw:'社会知名度 +3'},
   {id:'top',   name:'行业第一',  desc:'律所综合实力登顶行业榜单',          check:()=>industryRank()[0].name===S.firm,reward:()=>{S.prestige+=10}, rw:'行业声望 +10'}
 ];
 const ACHIEVEMENTS=[
   ['perfect','全胜',      '办结一件评级 9.0 以上的案子',      ()=>S.cases.some(c=>c.score>=9)],
-  ['bigfee', '一单顶一年','单个案子收费超过 ¥15,000,000',     ()=>S.cases.some(c=>c.paid>=15000000)],
+  ['bigfee', '一单顶一年','单个案子收费超过 ¥2,000,000',      ()=>S.cases.some(c=>c.paid>=2000000)],
   ['busy',   '高产之年',  '同一年内办结 5 个案子',            ()=>{const m={};return S.cases.some(c=>(m[c.endYear]=(m[c.endYear]||0)+1)>=5)}],
   ['stars',  '名家云集',  '同时拥有 3 名 ★ 名律师',           ()=>S.staff.filter(e=>e.star).length>=3],
   ['risky',  '刀尖上走路','风险代理连赢 3 次',                ()=>(S.flags.riskWin||0)>=3],
