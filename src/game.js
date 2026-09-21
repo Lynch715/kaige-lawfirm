@@ -48,7 +48,7 @@ function teamChemistry(team){let n=0;for(let i=0;i<team.length;i++)for(let j=i+1
 // ── 造案源 ──────────────────────────────────────────────────
 function partyName(){return pick(PARTY_A)+pick(PARTY_SUF)}
 function personName(){return pick(SURNAMES)+'某'}
-function makeLead(forceScale){
+function makeLead(forceScale,forceType){
   const tier=S.prestige+S.fame*1.5;
   let pool=CASE_TYPES.filter(x=>{
     if(S.flags.smallOnly&&!x.scales.includes('small'))return false;
@@ -59,7 +59,7 @@ function makeLead(forceScale){
   pool=pool.concat(pool.filter(x=>x.id==='counsel'||x.id==='compli'));
   if(!pool.length)pool=CASE_TYPES.filter(x=>x.scales.includes('small'));
   if(!pool.length)pool=CASE_TYPES;
-  const t=pick(pool);
+  const t=(forceType&&typeById(forceType))||pick(pool);
   let scales=t.scales.slice();
   if(S.flags.smallOnly)scales=scales.filter(s=>s==='small');
   if(tier<8)scales=scales.filter(s=>s!=='mega');
@@ -79,20 +79,103 @@ function makeLead(forceScale){
 function refreshLeads(){
   S.leads=S.leads.filter(l=>l.expire>S.week);
   const want=clamp(3+Math.floor((S.fame+S.prestige)/6),3,6);
+  // 老客户优先：关系处到位了，人家会带着新委托回来
+  if(S.leads.length<want){const r=repeatLead();if(r)S.leads.push(r)}
   while(S.leads.length<want)S.leads.push(makeLead());
+}
+// 关系 ≥3 的老客户会主动回来。收费上浮，案型挑他这类客户常打的官司，而且愿意多等几周。
+function repeatLead(){
+  const pool=S.clients.filter(cl=>cl.rel>=3&&S.week-cl.last>=8&&!S.leads.some(l=>l.repeat===cl.id));
+  if(!pool.length||Math.random()>.55)return null;
+  const cl=pick(pool);
+  const liked=CASE_TYPES.filter(t=>clientDefs[cl.type].likes.includes(t.name));
+  const l=makeLead(null,liked.length?pick(liked).id:null);
+  l.clientName=cl.name;l.clientType=cl.type;l.repeat=cl.id;
+  l.fee=Math.round(l.fee*(1+cl.rel*.07)/1000)*1000;
+  l.expire=S.week+12;
+  l.title=`${cl.name} · ${typeById(l.type).name}（再次委托）`;
+  l.name=cl.name.slice(0,2)+'·'+typeById(l.type).name;
+  return l;
+}
+// 系列案：同一批当事人的批量诉讼，案情几乎一样，周期短、单价低，一次办完比一个一个办省事
+function seriesLead(from){
+  const t=typeById(from.type);
+  const l=makeLead('small',t.id);
+  l.series=true;l.clientName=from.clientName;l.clientType=from.clientType;
+  l.name=from.name.split('·')[0]+'·'+t.name+'系列';
+  l.title=`${from.clientName}等 ${ri(6,20)} 人 · ${t.name}`;
+  l.brief=`和《${from.name}》同一批当事人，案情几乎一模一样，只是人换了。一次办完比一个一个办省事。`;
+  l.fee=Math.round(from.fee*.55/1000)*1000;
+  l.weeksMul=.62;l.expire=S.week+6;
+  return l;
 }
 
 // ── 对手与风向 ──────────────────────────────────────────────
-function makeRivals(){return RIVAL_DEFS.map(([name,desc,p])=>({name,desc,power:p,wins:0}))}
+function makeRivals(){return RIVAL_DEFS.map(([name,desc,p,bent])=>({name,desc,power:p,bent,wins:0}))}
 function processTrend(){if(S.week%26===0){S.trend=pick(trends);addNews('市场风向',`${S.trend[0]}：${S.trend[1]}`)}}
+// 这家所看上哪个案子。分数越高越想要，0 分表示不碰。
+function rivalWants(r,l){
+  const t=typeById(l.type),big=l.scale==='mega'?3:l.scale==='major'?2:1;
+  switch(r.bent){
+    case 'lit':   return t.dept==='lit'||t.dept==='crim'?big+2:0;
+    case 'cheap': return l.scale==='small'?3:l.scale==='major'?1:0;
+    case 'corp':  return t.dept==='corp'?big+2:0;
+    case 'gov':   return l.clientType==='gov'?4:l.clientType==='listed'?2:0;
+    case 'picky': return big>=2&&l.fee>=scaleDefs[l.scale].base*1.2?big+1:0;
+    default:      return big;
+  }
+}
 function processRivals(){
+  // 每 4 周抢一次案源：各家按自己的路子挑，不是随机拿走一个
+  if(S.week%4===0&&S.leads.length>2){
+    const r=pick(S.rivals);
+    const want=S.leads.map(l=>({l,v:rivalWants(r,l)})).filter(x=>x.v>0).sort((a,b)=>b.v-a.v);
+    // 名气比对手大的时候，案源不容易被抢走
+    const hold=clamp((S.prestige+S.fame)/(r.power*3),0,.75);
+    if(want.length&&Math.random()>hold){
+      const l=want[0].l;S.leads=S.leads.filter(x=>x.id!==l.id);
+      r.wins++;addNews('同行动态',`${r.name}签下了「${l.name}」。`);
+    }
+  }
+  // 每 8 周物色一个薪水明显低于行情的人，先接触，八周后才动手——留出加薪的窗口
+  if(S.week%8===0)maybePoach();
   if(S.week%12)return;
   S.rivals.forEach(r=>{r.power=clamp(r.power+rnd(-.2,.9)+(S.prestige>30?.3:0),3,42)});
-  // 抢案源
-  if(S.leads.length>3&&Math.random()<.5){
-    const l=S.leads.splice(ri(0,S.leads.length-1),1)[0],r=pick(S.rivals);
-    r.wins++;addNews('同行动态',`${r.name}签下了「${l.name}」。`);
+}
+// 行情价：person() 里怎么定薪的，这里就怎么算
+function marketSalary(e){return Math.round((2200+e.level*2600+e.stats[roles[e.role][1]]*340)/100)*100}
+function underpaid(e){return e.salary<marketSalary(e)*.85}
+function maybePoach(){
+  // 上一轮接触过的人，现在见分晓
+  if(S.poach){
+    const e=S.staff.find(x=>x.id===S.poach.id);
+    if(e&&underpaid(e)&&free(e)&&Math.random()<.6){
+      S.staff=S.staff.filter(x=>x.id!==e.id);
+      addNews('团队',`${e.name}去了${S.poach.by}。薪水的事，之前提过。`);
+      chron(`${e.name}被${S.poach.by}挖走。`);
+      addBuzz(-3);
+      const cl=S.clients.filter(c=>c.rel>=3);
+      if(cl.length&&Math.random()<.5){const c=pick(cl);c.rel=clamp(c.rel-2,0,5);
+        addNews('客户',`${c.name}那边跟${e.name}比较熟，这两天联系少了。`)}
+    }else if(e)addNews('团队',`${e.name}把${S.poach.by}的邀约推了。`);
+    S.poach=null;return;
   }
+  const targets=S.staff.filter(e=>underpaid(e));
+  if(!targets.length||Math.random()<.45)return;
+  const e=pick(targets),r=pick(S.rivals);
+  S.poach={id:e.id,by:r.name,at:S.week};
+  addNews('团队',`听说${r.name}在接触${e.name}。他现在的薪水确实低于行情。`);
+}
+// 对手的大案排期是能提前打听到的——同一个窗口撞上，媒体关注会被分走
+function rivalSlate(){
+  const era=Math.floor(S.week/4);
+  if(!S.slate||S.slate.at!==era){
+    S.slate={at:era,items:[]};
+    S.rivals.forEach(r=>{
+      if(r.power>6&&Math.random()<.3)S.slate.items.push({w:S.week+ri(1,6)*4,name:r.name});
+    });
+  }
+  return S.slate.items;
 }
 function industryRank(){
   const me={name:S.firm,power:S.prestige*.5+S.fame*.4+S.cases.filter(c=>c.score>=6).length*.3,me:true};
@@ -138,13 +221,14 @@ function deleteSave(){if(!confirm('删除存档？这一局就没了。'))return
 function normalize(s){
   const d={firm:'明诚律师事务所',origin:'spinoff',week:0,money:3000000,fame:1,prestige:2,buzz:50,risk:0,
     office:0,facilities:{},staff:[],active:[],cases:[],clients:[],retainers:[],leads:[],candidates:[],
-    clientAssets:{sme:0,listed:0,hnwi:0,gov:0,indiv:0},chemistry:{},rivals:[],trend:null,news:[],chron:[],
+    clientAssets:{sme:0,listed:0,hnwi:0,gov:0,indiv:0},chemistry:{},rivals:[],trend:null,news:[],chron:[],evtSeen:{},
     goals:{},ach:{},flags:{},buzzLog:[],pending:[],evtCd:{},nextId:1,speed:0,page:'home',loan:null,
-    suspendUntil:0,over:false};
+    suspendUntil:0,over:false,poach:null,slate:null,afterCase:null};
   for(const k in d)if(s[k]===undefined)s[k]=Array.isArray(d[k])?d[k].slice():(d[k]&&typeof d[k]==='object'?Object.assign({},d[k]):d[k]);
   if(!s.rivals.length)s.rivals=makeRivals();
   if(!s.trend)s.trend=trends[0];
   s.active.forEach(c=>{if(!c.quality)c.quality={fact:0,law:0,deal:0,work:0};if(c.polish===undefined)c.polish=0});
+  s.retainers.forEach(r=>{if(r.until===undefined)r.until=(r.since||0)+104});
   return s;
 }
 function load(){try{const raw=JSON.parse(localStorage.getItem(KEY));if(!raw||!raw.S)return null;return normalize(raw.S)}catch(e){return null}}
@@ -205,14 +289,17 @@ function tickWeek(){
   processStaff();processPending();processRisk();processTrend();processRivals();
   if(S.week%4===0)refreshLeads();
   if(S.week%4===0)payRetainers();
+  processRetainers();
   checkAwards();checkGoals();checkAchievements();financialRisk();
   if(S.week>=520&&!S.flags.decade){S.flags.decade=1;showEnding(null)}
   render();if(S.week%4===0)save();
 }
+// 房租会被事件涨上去，统一从一处算
+function rentNow(){return Math.round(OFFICES[S.office].rent*(1+(S.flags.rentUp||0)*.3))}
 function monthlyCosts(){
   if(S.week%4)return;
   const of=OFFICES[S.office];
-  let out=of.rent+S.staff.reduce((a,e)=>a+e.salary,0);
+  let out=rentNow()+S.staff.reduce((a,e)=>a+e.salary,0);
   S.money-=out;
   if(S.loan){S.money-=S.loan.per;S.loan.left--;if(S.loan.left<=0){S.loan=null;addNews('财务','银行贷款已结清。')}}
   if(S.flags.levy&&S.week%52===0){S.money-=S.flags.levy;addNews('财务',`投资人按约抽走 ${money(S.flags.levy)}。`)}
@@ -227,7 +314,7 @@ function processStaff(){
     const busy=!free(e);
     e.energy=clamp(e.energy+(busy?-1.1:3.4),0,100);
     e.weeks++;
-    if(e.weeks%52===0&&e.level<5&&Math.random()<.32){e.level++;STATS.forEach(([k])=>e.stats[k]+=ri(1,3));
+    if(e.weeks%52===0&&e.level<5&&Math.random()<(S.flags.mentor?.45:.32)){e.level++;STATS.forEach(([k])=>e.stats[k]+=ri(1,3));
       addNews('团队',`${e.name}的执业年限又长了一年，能力有提升。`)}
   });
 }
@@ -243,7 +330,7 @@ function dailyEstimate(){
   let manpower=0;
   idle.forEach(e=>{manpower+=(1200+e.level*1700)*(0.6+0.4*e.energy/100)});
   // 但零散活是案源封顶的，不是人多就能接更多——这条上限随知名度、声望和场地成长
-  const cap=(24000+S.fame*3000+S.prestige*1200)*(1+S.office*.45);
+  const cap=(24000+S.fame*3000+S.prestige*1200)*(1+S.office*.45)*(1+(S.flags.branch?.35:0));
   return {sum:Math.round(Math.min(manpower,cap)),capped:manpower>cap};
 }
 function dailyWork(){
@@ -256,6 +343,29 @@ function payRetainers(){
   let sum=0;S.retainers.forEach(r=>{sum+=r.monthly});
   S.money+=sum;
   if(sum)addNews('常年顾问',`本月收到 ${S.retainers.length} 份常年法律顾问费共 ${money(sum)}。`);
+}
+// 常年顾问合同两年一签。到期续不续，看关系、看口碑，还看当初那个负责人还在不在所里。
+function processRetainers(){
+  if(!S.retainers.length)return;
+  S.retainers=S.retainers.filter(r=>{
+    if(S.week<r.until)return true;
+    const cl=S.clients.find(x=>x.id===r.clientId),keeper=S.staff.find(e=>e.id===r.keeper);
+    let ok,why='';
+    if(!keeper){ok=Math.random()<.35;why='原来的负责人已经不在所里'}
+    else if(cl&&cl.rel<=1){ok=Math.random()<.3;why='这两年关系处得不好'}
+    else ok=Math.random()<clamp(.55+S.buzz/320+(cl?cl.rel*.05:0),.2,.95);
+    if(ok){
+      r.until=S.week+104;
+      const raise=Math.random()<.5;
+      if(raise)r.monthly=Math.round(r.monthly*rnd(1.05,1.25)/100)*100;
+      addNews('常年顾问',`${r.client}续签了常年法律顾问${raise?`，月费涨到 ${money(r.monthly)}`:''}。`);
+      if(cl)cl.rel=clamp(cl.rel+1,0,5);
+      return true;
+    }
+    addNews('常年顾问',`${r.client}没有续签常年法律顾问${why?`（${why}）`:''}。`);
+    addBuzz(-2);
+    return false;
+  });
 }
 
 // ── 案件推进 ────────────────────────────────────────────────
@@ -288,7 +398,7 @@ function processCases(){
     if(c.ready)return;
     const ph=PHASES[c.phase],sd=scaleDefs[c.scale],ef=EFFORTS[c.effort];
     const team=teamOf(c);if(!team.length)return;
-    const target=Math.max(2,sd.weeks*PHASE_W[c.phase]);
+    const target=Math.max(2,sd.weeks*(c.weeksMul||1)*PHASE_W[c.phase]);
     const p0=13;
     const power=teamPower(c,ph.stat);
     let speed=(100/target)*(0.62+0.38*power/p0);
@@ -327,7 +437,8 @@ function windowList(){
   const out=[];
   for(let i=1;i<=6;i++){
     const w=S.week+i*4,m=monthOf(w),y=yearOf(w),d=WINDOWS[m];
-    out.push({w,m,y,media:d[0],crowd:d[1],label:d[2]});
+    const cl=rivalSlate().find(x=>Math.abs(x.w-w)<4);
+    out.push({w,m,y,media:d[0],crowd:d[1],label:d[2],clash:cl?cl.name:null});
   }
   return out;
 }
@@ -354,7 +465,8 @@ function renderHearing(){
        <label class="deal"><input type="radio" name="hw" value="${i}" ${i===2?'checked':''}>
        <div><b>${w.y} 年 ${w.m} 月${w.label?' · '+w.label:''}</b>
        <small>拥挤度 ${w.crowd>=.8?'很高':w.crowd>=.4?'中等':'低'}　媒体关注 ×${w.media.toFixed(2)}
-       ${w.crowd>=.8?'　<span style="color:var(--warn)">排期紧，判决更保守</span>':''}</small></div></label>`).join('')}</div>
+       ${w.crowd>=.8?'<br><span style="color:var(--warn)">排期紧，判决更保守</span>':''}
+       ${w.clash?`<br><span style="color:var(--warn)">${esc(w.clash)}的大案也排在这一周，版面要分一半</span>`:''}</small></div></label>`).join('')}</div>
      <div class="fee-note">收费方案：<b>${FEES[c.feePlan].name}</b>　已收 ${money(c.paidIn)}　已投入 ${money(c.cost)}</div>`;
   byId('polishBtn').textContent=`追加两周补强 · ${money(scaleDefs[c.scale].base*0.09)}（已用 ${c.polish}/${MAX_POLISH}）`;
   byId('polishBtn').disabled=c.polish>=MAX_POLISH;
@@ -382,7 +494,7 @@ function confirmHearing(){
   const c=curCase;if(!c)return;
   const sel=document.querySelector('input[name="hw"]:checked');
   const w=windowList()[sel?+sel.value:2];
-  c.hearing=w;c.scheduled=true;
+  c.hearing=w;c.scheduled=true;if(w.clash)c.clash=w.clash;
   const court=DEPTS[c.dept].court;
   addNews('排期',`《${c.name}》${court?'开庭':'交割'}定在 ${w.y} 年 ${w.m} 月${w.label?'（'+w.label+'）':''}。`);
   closeDialog('hearingDialog');save();
@@ -452,7 +564,7 @@ function closeCase(c){
     if(score>=7)S.flags.riskWin=(S.flags.riskWin||0)+1;else S.flags.riskWin=0;
   }
   // 声誉
-  const media=c.hearing?c.hearing.media:1;
+  const media=(c.hearing?c.hearing.media:1)*(c.clash?.5:1);
   const d=(score-6.2);
   const pg=d*.22*(c.scale==='mega'?1.6:c.scale==='major'?1.2:.7);
   const fg=d*.18*media*(c.scale==='small'?.6:1.1);
@@ -462,8 +574,14 @@ function closeCase(c){
   if(score<4.5){addBuzz(-6);addNews('口碑',`《${c.name}》${court?'一审败诉':'项目流产'}，当事人在网上发了长文。`)}
   // 客户与资产
   const cl=findOrMakeClient(c);
+  c.clientId=cl.id;
   cl.rel=clamp(cl.rel+(score>=7?1:score>=5.5?0:-1),0,5);
   cl.entries++;cl.last=S.week;
+  // 办得漂亮的批量型案子，后面会跟着一串同样的
+  if(score>=6.5&&c.scale!=='small'&&['contract','labor','tm','copy','enforce'].includes(c.type)&&Math.random()<.35){
+    S.leads.push(seriesLead(c));
+    addNews('案源',`《${c.name}》办完之后，${cl.name}那边又来了一批一模一样的案子。`);
+  }
   const sat=clamp((c.sat||70)+(score-6)*6+(c.effort==='heavy'?6:0)+(S.facilities.room?8:0),0,100);
   c.sat=sat;
   const gain=Math.round((score-4)*(c.scale==='mega'?26:c.scale==='major'?14:6)*media);
@@ -474,12 +592,14 @@ function closeCase(c){
   // 常年顾问转化
   if(c.type==='counsel'&&score>=6&&S.retainers.length<8){
     const keeper=team.find(e=>e.role==='corporate')||team[0];
-    S.retainers.push({id:S.nextId++,client:cl.name,monthly:Math.round(c.fee*.12),keeper:keeper?keeper.id:null,since:S.week});
+    S.retainers.push({id:S.nextId++,client:cl.name,clientId:cl.id,monthly:Math.round(c.fee*.12),keeper:keeper?keeper.id:null,since:S.week,until:S.week+104});
     addNews('常年顾问',`${cl.name}签了常年法律顾问，每月 ${money(c.fee*.12)}。`);
   }
   S.cases.unshift(c);
+  if(Math.random()<(c.scale==='small'?.18:c.scale==='major'?.35:.5))S.afterCase={id:c.id,at:S.week+ri(1,3)};
   if(S.flags.smallOnly>0)S.flags.smallOnly--;
   if(S.flags.noListed>0)S.flags.noListed--;
+  if(c.clash)addNews('媒体',`《${c.name}》和${c.clash}的案子撞在同一周，版面被分走了大半。`);
   chron(`《${c.name}》结案，评级 ${score.toFixed(1)}，${c.verdict}。`);
   addNews('结案',`《${c.name}》${c.verdict}，结案评级 ${score.toFixed(1)}。`);
   showReport(c);
@@ -569,8 +689,11 @@ function startCase(){
     phase:0,prog:0,quality:{fact:0,law:0,deal:0,work:0},order:null,rush:0,weeks:0,cost:0,paidIn:0,
     polish:0,scheduled:false,hearing:null,sat:70,start:S.week};
   // 客户关系折上浮
-  const cl=S.clients.find(x=>x.name===c.clientName);
-  if(cl&&cl.rel>=3){c.fee=Math.round(c.fee*(1+cl.rel*.06));addNews('接案',`${cl.name}是回头客，收费上浮到 ${money(c.fee)}。`)}
+  if(l.weeksMul)c.weeksMul=l.weeksMul;
+  if(l.series)c.series=true;
+  const cl=S.clients.find(x=>x.id===l.repeat)||S.clients.find(x=>x.name===c.clientName);
+  if(cl){c.clientId=cl.id;
+    if(cl.rel>=3&&!l.repeat){c.fee=Math.round(c.fee*(1+cl.rel*.06));addNews('接案',`${cl.name}是回头客，收费上浮到 ${money(c.fee)}。`)}}
   const up=c.fee*FEES[plan].up;S.money+=up;c.paidIn=up;
   S.active.push(c);
   S.leads=S.leads.filter(x=>x.id!==l.id);
@@ -589,28 +712,41 @@ function evtReady(ev,ctx){
 function pickEvent(tier,ctx){
   const pool=EVENTS.filter(e=>e.tier===tier&&evtReady(e,ctx));
   if(!pool.length)return null;
-  const total=pool.reduce((a,e)=>a+(e.weight||5),0);let r=Math.random()*total;
-  for(const e of pool){r-=(e.weight||5);if(r<=0)return e}
-  return pool[0];
+  // 见过的往后排。同一条事件在一局里反复冒出来最伤沉浸感，
+  // 所以每见过一次，权重打到原来的 0.28——池子没被榨干之前基本不会重复。
+  const wt=e=>(e.weight||5)*Math.pow(.2,(S.evtSeen&&S.evtSeen[e.id])||0);
+  const total=pool.reduce((a,e)=>a+wt(e),0);
+  if(total<=0)return pick(pool);
+  let r=Math.random()*total;
+  for(const e of pool){r-=wt(e);if(r<=0)return e}
+  return pool[pool.length-1];
 }
 function processEvents(){
   if(curEvent)return;
-  // 案件事件
-  if(S.active.length&&Math.random()<.26){
+  // 结案后的回头账：客户要退费、对家来挖人、判决上了新闻……结完一两周才发作
+  if(S.afterCase&&S.week>=S.afterCase.at){
+    const w=S.cases.find(x=>x.id===S.afterCase.id);
+    S.afterCase=null;
+    if(w){const ev=pickEvent('close',{c:w,w});if(ev)return fireEvent(ev,{c:w,w})}
+  }
+  // 触发率是按「一局下来期望触发次数 ≈ 事件池大小」配的：
+  // 十年 520 周，case 池 43 条 → .12，firm 16 条 → .04，person 10 条 → .025。
+  // 再密就会重复刷同几条，再稀就撑不满一局。改事件数量的话这三个数也要跟着动。
+  if(S.active.length&&Math.random()<.12){
     const c=pick(S.active.filter(x=>!x.ready));
     if(c){const ev=pickEvent('case',{c,p:c});if(ev)return fireEvent(ev,{c,p:c})}
   }
-  // 律所事件
-  if(Math.random()<.10){const ev=pickEvent('firm',{});if(ev)return fireEvent(ev,{})}
-  // 人物事件
-  if(S.staff.length&&Math.random()<.08){
+  if(Math.random()<.04){const ev=pickEvent('firm',{});if(ev)return fireEvent(ev,{})}
+  if(S.staff.length&&Math.random()<.025){
     const e=pick(S.staff),ev=pickEvent('person',{e});
     if(ev)return fireEvent(ev,{e});
   }
   if(Math.random()<.22)addNews(...pick(NEWSFEED));
 }
 function fireEvent(ev,ctx){
-  curEvent={ev,ctx};S.evtCd[ev.id]=S.week;pauseForModal();
+  curEvent={ev,ctx};S.evtCd[ev.id]=S.week;
+  if(!S.evtSeen)S.evtSeen={};S.evtSeen[ev.id]=(S.evtSeen[ev.id]||0)+1;
+  pauseForModal();
   const txt=typeof ev.text==='function'?ev.text(ctx):ev.text;
   byId('eventTitle').textContent=typeof ev.title==='function'?ev.title(ctx):ev.title;
   byId('eventBody').innerHTML=
@@ -697,6 +833,15 @@ function hire(id,sign){
   chron(`${e.name}（${roles[e.role][0]}）入所。`);
   renderRecruit();render();save();
 }
+function raiseSalary(id){
+  const e=S.staff.find(x=>x.id===id);if(!e)return;
+  const to=Math.max(Math.round(e.salary*1.15/100)*100,marketSalary(e));
+  if(to<=e.salary){toast('已经在行情价之上了');return}
+  if(!confirm(`把 ${e.name} 的月薪从 ${money(e.salary)} 提到 ${money(to)}？`))return;
+  e.salary=to;addNews('团队',`给${e.name}加了薪，月薪 ${money(to)}。`);
+  if(S.poach&&S.poach.id===e.id)addNews('团队',`${e.name}那边的邀约，暂时不提了。`);
+  showPerson(id);render();
+}
 function fireStaff(id){
   const e=S.staff.find(x=>x.id===id);if(!e)return;
   if(!free(e)){toast('他手上还有案子');return}
@@ -715,7 +860,9 @@ function showPerson(id){
      <p style="margin-top:12px">体力 ${Math.round(e.energy)} / 100　月薪 ${money(e.salary)}　入所 ${Math.floor(e.weeks/52)} 年 ${e.weeks%52} 周</p>
      <p>经手案件 ${done.length} 件${done.length?'　平均评级 '+(done.reduce((a,c)=>a+c.score,0)/done.length).toFixed(1):''}</p>
      ${done.length?'<p class="subtle">'+done.slice(0,6).map(c=>`《${esc(c.name)}》${c.score.toFixed(1)}`).join('　')+'</p>':''}
-     <div class="card-actions"><button onclick="fireStaff(${e.id});closeDialog('personDialog')">辞退</button></div>`;
+     ${underpaid(e)?`<p class="hint danger">月薪 ${money(e.salary)}，低于行情价 ${money(marketSalary(e))}。这种人对家最爱挖。</p>`:''}
+     ${S.poach&&S.poach.id===e.id?`<p class="hint danger">${esc(S.poach.by)}正在接触他。加薪到行情价以上还来得及。</p>`:''}
+     <div class="card-actions"><button onclick="raiseSalary(${e.id})">加薪</button><button onclick="fireStaff(${e.id});closeDialog('personDialog')">辞退</button></div>`;
   openDialog('personDialog');
 }
 
@@ -757,7 +904,7 @@ function referLead(id){
 const GRACE=16;
 function financialRisk(){
   if(S.over)return;
-  const monthly=OFFICES[S.office].rent+S.staff.reduce((a,e)=>a+e.salary,0);
+  const monthly=rentNow()+S.staff.reduce((a,e)=>a+e.salary,0);
   if(S.money>=-monthly){                      // 缓过来了就把警告清掉
     if(S.flags.warned){S.flags.warned=0;addNews('财务','账面缓过来了，暂时不用散伙。')}
     return;
@@ -868,7 +1015,7 @@ function renderTrend(){
 function statCards(){
   const tier=riskTier(),dy=dailyEstimate();
   return `<div class="stats">
-    <div class="stat card${S.money<0?' danger':''}"><label>账面现金</label><b>${money(S.money)}</b><small>月开支 ${wan(OFFICES[S.office].rent+S.staff.reduce((a,e)=>a+e.salary,0))} · 日常业务 +${wan(dy.sum)}/周${dy.capped?' · 案源已满':''}</small></div>
+    <div class="stat card${S.money<0?' danger':''}"><label>账面现金</label><b>${money(S.money)}</b><small>月开支 ${wan(rentNow()+S.staff.reduce((a,e)=>a+e.salary,0))}${S.flags.rentUp?'（房租已涨）':''} · 日常业务 +${wan(dy.sum)}/周${dy.capped?' · 案源已满':''}</small></div>
     <div class="stat card"><label>行业声望</label><b>${S.prestige.toFixed(1)}</b><small>同行与法院</small></div>
     <div class="stat card"><label>社会知名度</label><b>${S.fame.toFixed(1)}</b><small>上门委托</small></div>
     <div class="stat card"><label>律所口碑</label><b>${Math.round(S.buzz)}</b><small>${buzzLabel(S.buzz)}</small></div>
@@ -937,7 +1084,7 @@ function renderLeads(){
        const why=leadBlocked(l);
        return `<div class="script">
          <h3>${l.hot?'🔥 ':''}${esc(l.name)}</h3>
-         <p class="subtle"><span class="dept" style="--d:${DEPTS[l.dept].color}"></span>${DEPTS[l.dept].name} · ${t.name} · ${scaleDefs[l.scale].name}${liked?' <span class="tag green">正当风口</span>':''}</p>
+         <p class="subtle"><span class="dept" style="--d:${DEPTS[l.dept].color}"></span>${DEPTS[l.dept].name} · ${t.name} · ${scaleDefs[l.scale].name}${liked?' <span class="tag green">正当风口</span>':''}${l.repeat?' <span class="tag green">老客户回头</span>':''}${l.series?' <span class="tag">系列案 · 周期短</span>':''}</p>
          <p>${esc(l.brief)}</p>
          <p class="subtle">委托方 ${esc(l.clientName)}（${clientDefs[l.clientType].name}）<br>基准收费 <b>${money(l.fee)}</b>　约 ${scaleDefs[l.scale].weeks} 周　${l.expire-S.week} 周内有效</p>
          ${why?`<p class="subtle" style="color:var(--warn)">接不了：${why}</p>`:''}
@@ -959,7 +1106,7 @@ function renderTeam(){
           <p>${STATS.map(([k,n])=>`${n} ${e.stats[k]}`).join('　')}</p>
           <div class="energy"><i style="width:${e.energy}%"></i></div>
         </div>
-        <aside>${busy?(on?`在办《${esc(on.name)}》`:'常年顾问'):'空闲'}<br>月薪 ${money(e.salary)}<br>
+        <aside>${busy?(on?`在办《${esc(on.name)}》`:'常年顾问'):'空闲'}<br>月薪 ${money(e.salary)}${underpaid(e)?'<br><span class="tag red">低于行情</span>':''}${S.poach&&S.poach.id===e.id?'<br><span class="tag red">被人接触</span>':''}<br>
           <button onclick="showPerson(${e.id})">档案</button></aside>
       </div>`}).join('')}
    </section>`;
@@ -998,7 +1145,9 @@ function renderStrategy(){
    <section class="card section"><h2>常年法律顾问 ${S.retainers.length} 份</h2>
      ${S.retainers.length?S.retainers.map(r=>{
        const k=S.staff.find(e=>e.id===r.keeper);
-       return `<div class="slate-item"><span>${money(r.monthly)}/月</span><span>${esc(r.client)}</span><span>${k?esc(k.name)+' 负责':'待分配'}</span></div>`}).join(''):
+       const left=r.until-S.week;
+       return `<div class="slate-item${left<=13?' danger':''}"><span>${money(r.monthly)}/月</span><span>${esc(r.client)}</span>
+         <span>${k?esc(k.name)+' 负责':'<span style="color:var(--warn)">负责人已离所</span>'} · ${left<=0?'待续签':left<=13?`${left} 周后到期`:`${Math.round(left/52*10)/10} 年后到期`}</span></div>`}).join(''):
        '<p class="subtle">还没有常年顾问合同。办结「常年法律顾问」类案件且评级 6 分以上会自动转化。</p>'}
    </section>
    <section class="card section"><h2>所内设施</h2>
@@ -1007,9 +1156,11 @@ function renderStrategy(){
         ${S.facilities[k]?'<span class="tag green">已建成</span>':`<button onclick="buildFacility('${k}')">建设 ${money(p)}</button>`}</div>`).join('')}</div>
    </section>
    <section class="card section"><h2>行业榜单</h2>
-     ${rank.slice(0,7).map((r,i)=>`<div class="rank"><span class="no">${i+1}</span>
-       <span>${esc(r.name)}${r.name===S.firm?' <span class="tag">本所</span>':''}</span>
-       <span class="subtle">${r.power.toFixed(1)}</span></div>`).join('')}
+     ${rank.slice(0,7).map((r,i)=>{const rv=S.rivals.find(x=>x.name===r.name);
+       return `<div class="rank"><span class="no">${i+1}</span>
+       <span>${esc(r.name)}${r.name===S.firm?' <span class="tag">本所</span>':''}
+         ${rv?`<br><small class="subtle">${esc(rv.desc)}${rv.wins?`　已抢走 ${rv.wins} 个案源`:''}</small>`:''}</span>
+       <span class="subtle">${r.power.toFixed(1)}</span></div>`}).join('')}
    </section>
    <section class="card section"><h2>经营目标</h2>
      <div class="goal-list">${GOALS.map(g=>`<div class="goal-row ${goalDone(g)?'ok':''}"><i>${goalDone(g)?'✓':'○'}</i><b>${g.name}</b><span>${g.desc} · ${g.rw}</span></div>`).join('')}</div>

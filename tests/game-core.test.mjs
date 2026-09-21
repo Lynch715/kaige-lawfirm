@@ -40,7 +40,8 @@ function makeCtx(){
   const bridge=`
   globalThis.__api={
     get S(){return S}, set S(v){S=v},
-    KEY,VERSION,OFFICES,scaleDefs,PHASES,QUALITIES,FEES,EFFORTS,DEPTS,CASE_TYPES,ORIGINS,dailyWork,dailyEstimate,person,
+    KEY,VERSION,OFFICES,scaleDefs,PHASES,QUALITIES,FEES,EFFORTS,DEPTS,CASE_TYPES,ORIGINS,dailyWork,dailyEstimate,person,resolveEvent,skipEvent,confirmHearing,
+    get curEvent(){return curEvent}, get curCase(){return curCase},
     RISK_DECAY,RISK_DECAY_WEEKS,RISK_TIERS,EVENTS,CHAINS,NEWSFEED,ART,roles,GOALS,ACHIEVEMENTS,
     free,pick,clamp,teamOf,
     newGame,tickWeek,closeCase,addRisk,riskTier,addBuzz,
@@ -109,12 +110,23 @@ group('日常业务');
 }
 
 // ── 2. 长时间推进不炸 ──────────────────────────────────────
-group('推进 260 周');
+group('推进整整十年（520 周）');
 {
   const g=makeCtx();g.newGame('spinoff');
   let err=null;
+  const fired={};            // 事件 id → 触发次数
   try{
-    for(let i=0;i<260;i++){
+    for(let i=0;i<520;i++){
+      // 处理弹出来的事件。不处理的话 curEvent 一直挂着，
+      // processEvents 直接返回，后面整局再不会有任何事件——这个测试以前就是这么空跑的。
+      let guard=0;
+      while(g.curEvent&&guard++<6){
+        const ev=g.curEvent.ev;
+        fired[ev.id]=(fired[ev.id]||0)+1;
+        if(ev.onSkip&&Math.random()<.35)g.skipEvent();
+        else g.resolveEvent(Math.floor(Math.random()*ev.choices.length));
+      }
+      if(g.curCase)g.confirmHearing();
       // 有空位就接一个案子，模拟正常游玩
       if(g.S.active.length<g.OFFICES[g.S.office].slots&&g.S.leads.length&&!g.S.suspendUntil){
         const l=g.S.leads.find(x=>!(g.S.flags.smallOnly&&x.scale!=='small')&&!(g.S.flags.noListed&&x.clientType==='listed'));
@@ -133,7 +145,23 @@ group('推进 260 周');
       g.tickWeek();
     }
   }catch(e){err=e}
-  ok('260 周无异常',!err,err&&err.stack&&err.stack.split('\n').slice(0,2).join(' | '));
+  ok('520 周无异常',!err,err&&err.stack&&err.stack.split('\n').slice(0,2).join(' | '));
+  const total=Object.values(fired).reduce((a,b)=>a+b,0);
+  const worst=Object.entries(fired).sort((a,b)=>b[1]-a[1]).slice(0,5);
+  // 局可能中途结束（破产/吊销），密度断言按实际活了多少周折算
+  const lived=g.S.week||1, scale=lived/520;
+  ok('事件密度合适（约每 5~6 周一条）',total>=Math.round(55*scale),`${total} 次 / ${lived} 周`);
+  ok('事件种类铺得开',Object.keys(fired).length>=Math.round(35*scale),`${Object.keys(fired).length} 种`);
+  // 验收标准：一局打完不该被同一条事件反复刷。
+  // 链式后果（ch_*）不算——那是玩家自己反复选同一类险招招来的，重复本身就是反馈。
+  const rolled=Object.entries(fired).filter(x=>!x[0].startsWith('ch_'));
+  const top=rolled.sort((a,b)=>b[1]-a[1]).slice(0,5);
+  // 上限只能定到 4：事件按阶段和条件分池，调查取证那一档的有效池只有十来条，
+  // 而它是四个阶段里最长的。再往下压就得加事件，不是调参数能解决的。
+  ok('随机事件不会被刷到第五次',rolled.every(x=>x[1]<=4),top.map(x=>x[0]+'×'+x[1]).join(' '));
+  const heavy=rolled.filter(x=>x[1]>=3).length;
+  ok('撞见三次的事件不超过两成',heavy<=rolled.length*.2,`${heavy}/${rolled.length}`);
+  ok('绝大多数事件一局只见一两次',rolled.filter(x=>x[1]<=2).length>=rolled.length*.8);
   ok('确实结了案',g.S.cases.length>0,g.S.cases.length);
   ok('每个结案都有评级和结果',g.S.cases.every(c=>typeof c.score==='number'&&!!c.verdict));
   ok('评级不越规模上限',g.S.cases.every(c=>c.score<=g.scaleDefs[c.scale].cap+1e-9));
