@@ -33,6 +33,7 @@ function person(role,lv){
   e.stats[roles[role][1]]=clamp(Math.round(base*rnd(1.0,1.35)),5,30);
   e.salary=Math.round((2200+e.level*2600+e.stats[roles[role][1]]*340)/100)*100;
   e.face=pickFace(role,false);
+  e.until=ri(104,208);      // 合约期两到四年，入所时按当前周换算
   return e;
 }
 function makeStar(role){
@@ -201,12 +202,50 @@ function processRisk(){
   }
   // 口碑每季度向中位回归一点，热度是会退的
   if(S.week%13===0&&S.week>0)addBuzz((50-S.buzz)*.08);
-  if(S.risk>=85&&!S.suspendUntil&&Math.random()<.18){
-    S.suspendUntil=S.week+ri(4,8);
-    addNews('司法局',`因执业风险持续过高，律所被责令停业整顿至 ${dateText(S.suspendUntil)}。`);
-    chron(`被责令停业整顿 ${S.suspendUntil-S.week} 周`);
-    addBuzz(-14);setSpeed(0);
+
+  // ── 65 档：立案调查。给一次说清楚的机会，平息之后要再涨 12 点才会再来 ──
+  if(S.risk>=65&&S.risk>=(S.flags.probeAt||0)+12&&!curEvent&&!S.suspendUntil){
+    S.flags.probeAt=S.risk;
+    fireEvent(RISK_EVENTS.probe,{});
+    return;
   }
+  // ── 85 档：不再是直接停业，先下限期整改通知，留六周窗口 ──
+  if(S.risk>=85&&!S.rectify&&!S.suspendUntil){
+    S.rectify=S.week+6;
+    addNews('司法局','收到限期整改通知：六周内把执业风险降到 85 以下，否则责令停业整顿。');
+    chron('收到限期整改通知。');
+    setSpeed(0);toast('司法局下了限期整改通知');
+  }
+  if(S.rectify&&S.week>=S.rectify){
+    S.rectify=0;
+    if(S.risk>=85){
+      S.suspendUntil=S.week+ri(4,8);
+      addNews('司法局',`整改期满风险仍未降下来，责令停业整顿至 ${dateText(S.suspendUntil)}。`);
+      chron(`被责令停业整顿 ${S.suspendUntil-S.week} 周`);
+      addBuzz(-14);setSpeed(0);
+    }else{
+      addNews('司法局','整改期内风险已降下来，免于停业。');
+      addBuzz(3);
+    }
+  }
+}
+// 主动做一轮合规整改：花钱、花人，把风险压下去。八周一次。
+function rectifyNow(){
+  if(S.risk<=0){toast('执业记录是干净的');return}
+  if(S.flags.rectAt!==undefined&&S.week-S.flags.rectAt<8){toast(`上次整改才过去 ${S.week-S.flags.rectAt} 周，八周一次`);return}
+  // 一轮合规整改就是清冲突、补归档、重签告知，工作量基本是固定的。
+  // 原来按当前风险线性收费，风险 83 的所要付风险 30 的三倍，说不通，也把
+  // 「敢越线但会管理」这条路线直接拖垮了。改成基本盘为主，风险只占一小部分。
+  const cost=Math.round(Math.max(40000,55000+S.risk*700)/1000)*1000;
+  const idle=S.staff.filter(free);
+  if(idle.length<2){toast('至少要两个闲着的人来做这件事');return}
+  if(S.money<cost){toast('账上不够');return}
+  if(!confirm(`做一轮合规整改：清冲突、补归档、重签风险告知。花 ${money(cost)}，占用两个人，执业风险 -12。`))return;
+  S.money-=cost;S.flags.rectAt=S.week;
+  idle.slice(0,2).forEach(e=>e.energy=clamp(e.energy-14,0,100));
+  addRisk(-12);
+  addNews('律所','做了一轮合规整改，把该补的都补了。');
+  render();save();
 }
 
 // ── 消息与编年史 ────────────────────────────────────────────
@@ -223,12 +262,13 @@ function normalize(s){
     office:0,facilities:{},staff:[],active:[],cases:[],clients:[],retainers:[],leads:[],candidates:[],
     clientAssets:{sme:0,listed:0,hnwi:0,gov:0,indiv:0},chemistry:{},rivals:[],trend:null,news:[],chron:[],evtSeen:{},
     goals:{},ach:{},flags:{},buzzLog:[],pending:[],evtCd:{},nextId:1,speed:0,page:'home',loan:null,
-    suspendUntil:0,over:false,poach:null,slate:null,afterCase:null};
+    suspendUntil:0,over:false,poach:null,slate:null,afterCase:null,trial:null,rectify:0};
   for(const k in d)if(s[k]===undefined)s[k]=Array.isArray(d[k])?d[k].slice():(d[k]&&typeof d[k]==='object'?Object.assign({},d[k]):d[k]);
   if(!s.rivals.length)s.rivals=makeRivals();
   if(!s.trend)s.trend=trends[0];
   s.active.forEach(c=>{if(!c.quality)c.quality={fact:0,law:0,deal:0,work:0};if(c.polish===undefined)c.polish=0});
   s.retainers.forEach(r=>{if(r.until===undefined)r.until=(r.since||0)+104});
+  s.staff.forEach(e=>{if(e.until===undefined)e.until=(s.week||0)+ri(52,208)});
   return s;
 }
 function load(){try{const raw=JSON.parse(localStorage.getItem(KEY));if(!raw||!raw.S)return null;return normalize(raw.S)}catch(e){return null}}
@@ -252,6 +292,7 @@ function newGame(key){
   // 初始班底
   const seed=o.small?['partner','litigator','paralegal']:['partner','litigator','corporate','associate','paralegal'];
   seed.forEach((r,i)=>S.staff.push(person(r,o.small?ri(1,2):(i===0?3:ri(2,3)))));
+  S.staff.forEach(e=>{e.until=ri(78,208)});   // 开局班底的合约到期时间错开，别挤在一起
   if(key==='spinoff'){
     const senior=person('litigator',4);senior.name=freshName();S.staff.push(senior);
     const c={id:S.nextId++,name:partyName(),type:'sme',rel:3,entries:1,last:0};
@@ -286,7 +327,7 @@ function tickWeek(){
   if(S.suspendUntil&&S.week>=S.suspendUntil){S.suspendUntil=0;addNews('司法局','停业整顿期满，律所恢复执业。')}
   monthlyCosts();dailyWork();
   if(!S.suspendUntil){processCases();processEvents()}
-  processStaff();processPending();processRisk();processTrend();processRivals();
+  processStaff();processContracts();processPending();processRisk();processTrend();processRivals();
   if(S.week%4===0)refreshLeads();
   if(S.week%4===0)payRetainers();
   processRetainers();
@@ -308,6 +349,43 @@ function monthlyCosts(){
     if(!S.cases.some(c=>c.score>=7)){addNews('财务','两年之约到期，投资人撤资离场。');S.money-=2000000;addBuzz(-10)}
     else addNews('财务','两年之约达标，投资人继续留在局内。');
   }
+}
+// 合约到期前三个月来谈。谈不拢或者放着不管，人就去对手那里。
+function renewEvent(e){
+  const ask=Math.round(Math.max(e.salary*rnd(1.12,1.35),marketSalary(e)*1.05)/100)*100;
+  const mid=Math.round((e.salary+ask)/2/100)*100;
+  const yrs=Math.floor(e.weeks/52);
+  return {id:'renew_'+e.id,tier:'contract',mood:'sign',
+    title:`${e.name}的合约要到期了`,
+    text:()=>`${e.name}在所里${yrs?yrs+'年':'还不到一年'}了，合约${e.until-S.week}周后到期。`+
+      `他开的价是月薪 ${money(ask)}，现在是 ${money(e.salary)}。`,
+    choices:[
+      {label:`按他开的价签`,note:`月薪 ${money(ask)} · 续四年`,
+       apply:()=>{e.salary=ask;e.until=S.week+208;e.talked=0;e.energy=clamp(e.energy+8,0,100);
+         addNews('团队',`${e.name}续约了，月薪 ${money(ask)}。`)}},
+      {label:`压到 ${money(mid)}`,note:'省钱 · 有可能当场谈崩',
+       apply:()=>{
+         const ok=Math.random()<clamp(.45+S.buzz/240+(e.energy-60)/300,.15,.85);
+         if(ok){e.salary=mid;e.until=S.week+156;e.talked=0;addNews('团队',`${e.name}接受了 ${money(mid)}，续约三年。`)}
+         else{S.staff=S.staff.filter(y=>y.id!==e.id);addBuzz(-4);
+           addNews('团队',`${e.name}没谈拢，当场就走了。`);chron(`${e.name}续约谈崩离所。`)}}},
+      {label:'底薪不动，改成参与案件分红',note:'不涨月薪 · 他经手的案子按 4% 分成',
+       apply:()=>{e.share=(e.share||0)+.04;e.until=S.week+208;e.talked=0;
+         addNews('团队',`${e.name}改签了分红制，底薪不动。`)}}],
+    onSkip:()=>{addNews('团队',`${e.name}的续约这事，先搁着了。`)}};
+}
+function processContracts(){
+  if(curEvent||S.trial)return;
+  const e=S.staff.find(x=>x.until&&x.until-S.week<=12&&x.until>S.week&&!x.talked);
+  if(e){e.talked=1;fireEvent(renewEvent(e),{e});return}
+  // 到期了还没续的，走人
+  const gone=S.staff.filter(x=>x.until&&S.week>=x.until);
+  gone.forEach(x=>{
+    S.staff=S.staff.filter(y=>y.id!==x.id);
+    addBuzz(-3);
+    addNews('团队',`${x.name}的合约到期没续，人已经走了。`);
+    chron(`${x.name}合约到期离所。`);
+  });
 }
 function processStaff(){
   S.staff.forEach(e=>{
@@ -396,8 +474,26 @@ function setOrder(id,k){
 function processCases(){
   [...S.active].forEach(c=>{
     if(c.ready)return;
+    // 人可能因为合约到期、被挖、辞退而离所，先把案组里已经不在的人清掉
+    c.team=c.team.filter(id=>S.staff.some(e=>e.id===id));
     const ph=PHASES[c.phase],sd=scaleDefs[c.scale],ef=EFFORTS[c.effort];
-    const team=teamOf(c);if(!team.length)return;
+    const team=teamOf(c);
+    if(!team.length){
+      // 没人办的案子不能就这么冻在那儿——会烂，烂到一定程度客户就解约了
+      c.idle=(c.idle||0)+1;
+      if(c.idle===1){addNews('办案',`《${c.name}》的人走光了，现在没人管。再拖下去客户要解约。`);setSpeed(0);toast(`《${c.name}》没人办了`)}
+      QUALITIES.forEach(([k])=>{c.quality[k]=Math.max(0,c.quality[k]-1.5)});
+      c.sat=Math.max(0,(c.sat||70)-3);
+      if(c.idle>=6){
+        S.active=S.active.filter(x=>x.id!==c.id);
+        const cl=S.clients.find(y=>y.id===c.clientId);if(cl)cl.rel=clamp(cl.rel-2,0,5);
+        addBuzz(-6);S.money-=Math.round(c.paidIn*.5);
+        addNews('解约',`${c.clientName}解除了《${c.name}》的委托，退回一半已收费用。`);
+        chron(`《${c.name}》被客户解约。`);
+      }
+      return;
+    }
+    c.idle=0;
     const target=Math.max(2,sd.weeks*(c.weeksMul||1)*PHASE_W[c.phase]);
     const p0=13;
     const power=teamPower(c,ph.stat);
@@ -423,6 +519,8 @@ function processCases(){
     if(c.feePlan==='hourly'){const inc=team.length*HOUR_RATE*(1+S.office*.18);S.money+=inc;c.paidIn+=inc;c.sat=clamp((c.sat||70)-0.4,0,100)}
     // 推进
     c.prog+=speed;addQ(c,ph.quality,QBASE/100*speed*qMod);c.weeks++;
+    // 排期定完、主攻阶段过半，就该上庭了。小案和非诉不走这一套。
+    if(c.phase===2&&c.scheduled&&c.prog>=50&&trialEligible(c)&&!S.trial){startTrial(c.id);return}
     if(c.prog>=100){
       c.prog=0;c.phase++;
       if(c.phase===2&&!c.scheduled){openHearing(c.id);return}
@@ -531,6 +629,7 @@ function baseScore(c){
   if(S.trend&&S.trend[0]===t.name)v+=.25;
   if(c.hearing)v*=1-c.hearing.crowd*.06;
   v+=EFFORTS[c.effort].q*1.6;
+  v+=c.trialBonus||0;                 // 庭上打成什么样，直接加进评级
   return clamp(v,0.5,scaleDefs[c.scale].cap);
 }
 function previewScore(c){
@@ -559,6 +658,10 @@ function closeCase(c){
   else if(c.feePlan==='risk')end=c.fee*1.75*clamp((score-4)/5.2,0,1.25);
   else end=c.fee*plan.end*(0.8+0.4*score/10);
   S.money+=end;c.paidIn+=end;c.paid=c.paidIn;
+  // 签了分红制的人，经手的案子要分一笔出去
+  const share=teamOf(c).reduce((a,e)=>a+(e.share||0),0);
+  if(share>0){const cut=Math.round(c.paidIn*share);S.money-=cut;c.shareOut=cut;
+    addNews('分配',`《${c.name}》按分红制分出 ${money(cut)}。`)}
   c.profit=c.paidIn-c.cost;
   if(c.feePlan==='risk'){
     if(score>=7)S.flags.riskWin=(S.flags.riskWin||0)+1;else S.flags.riskWin=0;
@@ -618,6 +721,7 @@ function showReport(c){
     sceneBanner(good?'award':'hallway',c.name,`${DEPTS[c.dept].name} · ${t.name}`)+
     `<div class="big-score">${c.score.toFixed(1)}</div>
      <div class="verdict${c.score<4.5?' bad':''}">${c.verdict}</div>
+     ${c.trialNote?`<p class="subtle">开庭：${c.trialNote}（评级 ${c.trialBonus>0?'+':''}${c.trialBonus.toFixed(1)}）</p>`:''}
      <p class="subtle">${esc(c.brief)}</p>
      <div class="qualities">${QUALITIES.map(([k,n])=>`<div>${n}<b>${Math.round(c.quality[k])}</b></div>`).join('')}</div>
      <div class="fee-note" style="margin-top:12px">
@@ -826,6 +930,7 @@ function renderRecruit(){
 }
 function hire(id,sign){
   const e=S.candidates.find(x=>x.id===id);if(!e)return;
+  e.until=S.week+ri(104,208);
   if(S.money<sign){toast('签约金不够');return}
   if(S.staff.length>=OFFICES[S.office].cap){toast('办公室坐不下了');return}
   S.money-=sign;S.staff.push(e);S.candidates=S.candidates.filter(x=>x.id!==id);
@@ -858,6 +963,7 @@ function showPerson(id){
      ${e.star?`<p class="subtle">${starTraits[e.trait].desc}</p>`:''}
      <div class="qualities">${STATS.map(([k,n])=>`<div>${n}<b>${e.stats[k]}</b></div>`).join('')}</div>
      <p style="margin-top:12px">体力 ${Math.round(e.energy)} / 100　月薪 ${money(e.salary)}　入所 ${Math.floor(e.weeks/52)} 年 ${e.weeks%52} 周</p>
+     <p class="subtle">合约${e.until?`${e.until<=S.week?'已到期':`还有 ${Math.round((e.until-S.week)/52*10)/10} 年`}`:'未约定'}${e.share?`　案件分红 ${Math.round(e.share*100)}%`:''}</p>
      <p>经手案件 ${done.length} 件${done.length?'　平均评级 '+(done.reduce((a,c)=>a+c.score,0)/done.length).toFixed(1):''}</p>
      ${done.length?'<p class="subtle">'+done.slice(0,6).map(c=>`《${esc(c.name)}》${c.score.toFixed(1)}`).join('　')+'</p>':''}
      ${underpaid(e)?`<p class="hint danger">月薪 ${money(e.salary)}，低于行情价 ${money(marketSalary(e))}。这种人对家最爱挖。</p>`:''}
@@ -1106,7 +1212,7 @@ function renderTeam(){
           <p>${STATS.map(([k,n])=>`${n} ${e.stats[k]}`).join('　')}</p>
           <div class="energy"><i style="width:${e.energy}%"></i></div>
         </div>
-        <aside>${busy?(on?`在办《${esc(on.name)}》`:'常年顾问'):'空闲'}<br>月薪 ${money(e.salary)}${underpaid(e)?'<br><span class="tag red">低于行情</span>':''}${S.poach&&S.poach.id===e.id?'<br><span class="tag red">被人接触</span>':''}<br>
+        <aside>${busy?(on?`在办《${esc(on.name)}》`:'常年顾问'):'空闲'}<br>月薪 ${money(e.salary)}${e.share?`<br><span class="tag">分红 ${Math.round(e.share*100)}%</span>`:''}${e.until&&e.until-S.week<=12?`<br><span class="tag red">合约 ${e.until-S.week} 周后到期</span>`:''}${underpaid(e)?'<br><span class="tag red">低于行情</span>':''}${S.poach&&S.poach.id===e.id?'<br><span class="tag red">被人接触</span>':''}<br>
           <button onclick="showPerson(${e.id})">档案</button></aside>
       </div>`}).join('')}
    </section>`;
@@ -1132,6 +1238,9 @@ function renderStrategy(){
      <div class="riskbar ${S.risk>=65?'risk-hot':S.risk>=40?'risk-mid':'risk-ok'}"><i style="width:${S.risk}%"></i></div>
      <p class="risk-note ${S.risk>=65?'hot':''}">${Math.round(S.risk)} / 100 · ${tier[1]} —— ${tier[2]}</p>
      <p class="subtle">每 ${RISK_DECAY_WEEKS} 周自然回落 ${RISK_DECAY} 点。${S.facilities.risk?'内部合规风控岗已建成，所有涨幅 ×0.65。':'建「内部合规风控岗」可把涨幅压到 0.65 倍。'}</p>
+     ${S.rectify?`<p class="hint danger">限期整改中：还剩 ${S.rectify-S.week} 周。到期风险仍在 85 以上就要停业整顿。</p>`:''}
+     <div class="card-actions"><button onclick="rectifyNow()" ${S.flags.rectAt!==undefined&&S.week-S.flags.rectAt<8?'disabled':''}>
+       ${S.flags.rectAt!==undefined&&S.week-S.flags.rectAt<8?`合规整改（还要等 ${8-(S.week-S.flags.rectAt)} 周）`:`做一轮合规整改 · 风险 -12`}</button></div>
    </section>
    <section class="card section"><h2>律所口碑走势</h2>
      <p>${Math.round(S.buzz)} / 100 · ${buzzLabel(S.buzz)}</p>

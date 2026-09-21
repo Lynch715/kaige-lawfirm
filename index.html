@@ -98,7 +98,14 @@
     .order-hint{margin:8px 0 0;font-size:12px}
     @media(max-width:760px){dialog>.toast{bottom:88px}.scene-band{height:104px}.scene-band b{font-size:18px}.portrait{width:40%}.orders{grid-template-columns:repeat(3,minmax(0,1fr))}.studio>.dashboard{display:contents}.set-card{order:1}.board{order:2}.quick{order:3}}
   
-    .stat.danger b{color:var(--warn)}.riskbar{height:9px;border-radius:9px;overflow:hidden;background:#dcdfd6;margin:8px 0 4px}
+    .stat.danger b{color:var(--warn)}.trial-log{margin:10px 0 0;padding:10px 12px;background:#efede3;border-left:3px solid var(--brass);font-size:13px;line-height:1.7;border-radius:2px}
+    .trial-log div{padding:3px 0}
+    .trial-hand{display:grid;gap:8px}
+    .trial-card{display:block;width:100%;text-align:left;padding:11px 13px;border-radius:2px}
+    .trial-card b{display:inline-block;font-size:15px;margin-right:8px}
+    .trial-card small{display:block;margin-top:4px;color:var(--muted);font-size:12px;line-height:1.5;font-weight:400}
+    @media(max-width:760px){.trial-card{padding:10px 11px}.trial-hand{gap:7px}}
+    .riskbar{height:9px;border-radius:9px;overflow:hidden;background:#dcdfd6;margin:8px 0 4px}
     .riskbar i{display:block;height:100%;border-radius:inherit;transition:width .3s}
     .risk-ok i{background:linear-gradient(90deg,#4d8e72,#7fb79a)}
     .risk-mid i{background:linear-gradient(90deg,#818c67,#cab588)}
@@ -151,6 +158,8 @@
 
   <dialog id="hearingDialog" aria-labelledby="hearingHead"><div class="dhead"><h2 id="hearingHead">排期与结案准备</h2><button aria-label="关闭" onclick="closeDialog('hearingDialog')">×</button></div><div id="hearingBody" class="dbody"></div><div class="dfoot"><button id="polishBtn" onclick="polishCase()">追加两周补强</button><button class="primary" onclick="confirmHearing()">确认排期</button></div></dialog>
 
+  <dialog id="trialDialog" aria-labelledby="trialHead"><div class="dhead"><h2 id="trialHead">开庭</h2></div><div id="trialBody" class="dbody"></div><div class="dfoot"><button id="trialSkip" onclick="skipTrial()">交给出庭律师 · 按常规打</button><button id="trialClose" class="primary hidden" onclick="closeTrial()">退庭</button></div></dialog>
+
   <dialog id="eventDialog" aria-labelledby="eventTitle"><div class="dhead"><h2 id="eventTitle">办案抉择</h2></div><div id="eventBody" class="dbody"></div><div class="dfoot"><button id="eventSkipBtn" onclick="skipEvent()">按原方案办 · 不额外投入</button></div></dialog>
 
   <dialog id="recruitDialog" aria-labelledby="recruitHead"><div class="dhead"><h2 id="recruitHead">招人</h2><button aria-label="关闭" onclick="closeDialog('recruitDialog')">×</button></div><div id="recruitBody" class="dbody"></div><div class="dfoot"><button onclick="refreshCandidates()">换一批 · 2.5 万</button><button onclick="closeDialog('recruitDialog')">关闭</button></div></dialog>
@@ -186,6 +195,7 @@
   <script src="src/data.js"></script>
   <script src="src/events.js"></script>
   <script src="src/art.js"></script>
+  <script src="src/trial.js"></script>
   <script src="src/game.js"></script>
 </body>
 </html>

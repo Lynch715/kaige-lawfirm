@@ -33,13 +33,13 @@ function makeCtx(){
     confirm:()=>true,alert(){},location:{reload(){}}};
   ctx.window={addEventListener(){}};ctx.globalThis=ctx;
   vm.createContext(ctx);
-  const code=['src/data.js','src/events.js','src/art.js','src/game.js']
+  const code=['src/data.js','src/events.js','src/art.js','src/trial.js','src/game.js']
     .map(f=>fs.readFileSync(path.join(ROOT,f),'utf8')).join('\n;\n');
   const bridge=`globalThis.__api={get S(){return S},set S(v){S=v},
     get curEvent(){return curEvent}, get curCase(){return curCase},
     OFFICES,scaleDefs,FEES,EVENTS,GOALS,ACHIEVEMENTS,DEPTS,facilities,typeById,
-    newGame,tickWeek,openCase,startCase,confirmHearing,resolveEvent,skipEvent,setOrder,
-    free,pick,upgradeOffice,buildFacility,openRecruit,hire,clientTotal,industryRank,takeLoan};`;
+    newGame,tickWeek,openCase,startCase,confirmHearing,resolveEvent,skipEvent,setOrder,skipTrial,closeTrial,
+    free,pick,upgradeOffice,buildFacility,openRecruit,hire,clientTotal,industryRank,takeLoan,rectifyNow};`;
   vm.runInContext(code+'\n;\n'+bridge,ctx,{filename:'bundle.js'});
   ctx.__api.__doc=document;
   return ctx.__api;
@@ -62,6 +62,20 @@ const STRATS={
       if(risky>=0&&Math.random()<.25)return risky;
       const safe=ev.choices.findIndex(c=>!c.risk);
       return safe<0?0:safe}},
+  // ── 验收对照组：这两条只在「碰不碰红线」上有区别，别的完全一样 ──
+  踩线派:{origin:'spinoff',plan:c=>c.scale==='small'?'hourly':'risk',effort:()=>'heavy',
+    order:()=>'quality',noCompliance:true,
+    choose:(ev)=>{const r=ev.choices.findIndex(c=>c.risk);return r>=0?r:0}},
+  合规派:{origin:'spinoff',plan:c=>c.scale==='small'?'hourly':'risk',effort:()=>'heavy',
+    order:()=>'quality',compliance:true,
+    choose:(ev)=>{const s=ev.choices.findIndex(c=>!c.risk);return s<0?0:s}},
+  // 敢越线，但会管理：建风控岗、风险过 45 就主动整改、逼近 75 就先收手
+  红线管理派:{origin:'spinoff',plan:c=>c.scale==='small'?'hourly':'risk',effort:()=>'heavy',
+    order:()=>'quality',compliance:true,manageAt:70,
+    choose:(ev,S)=>{
+      const r=ev.choices.findIndex(c=>c.risk);
+      if(r>=0&&S.risk<75)return r;
+      const s=ev.choices.findIndex(c=>!c.risk);return s<0?0:s}},
   // 和「混合」完全一样，只多一个行为：红线过 55 就收手，等它降下来再说。
   // 这条是用来验证反馈回路能不能用的——真人是看得见那根条的。
   看红线:{origin:'spinoff',plan:c=>c.scale==='small'?'hourly':(Math.random()<.4?'risk':'fixed'),
@@ -94,6 +108,9 @@ function runOne(name,S_){
     }
     // 该排期就排期
     if(g.curCase)g.confirmHearing();
+    // 开庭：这几种打法都交给出庭律师按常规打，省得把牌局的随机性混进数值结论里
+    if(g.S.trial&&!g.S.trial.done)g.skipTrial();
+    if(g.S.trial&&g.S.trial.done)g.closeTrial();
     // 有空位就接案
     const slots=g.OFFICES[g.S.office].slots;
     if(g.S.active.length<slots&&!g.S.suspendUntil&&g.S.leads.length){
@@ -122,7 +139,14 @@ function runOne(name,S_){
       g.openRecruit();const c=g.S.candidates&&g.S.candidates[0];
       if(c)g.hire(c.id,Math.round(c.salary*(c.star?3.2:1.6)));
     }
-    for(const f of g.facilities)if(!g.S.facilities[f[0]]&&g.S.money>f[3]*3)g.buildFacility(f[0]);
+    if(st.compliance){
+      if(!g.S.facilities.risk&&g.S.money>g.facilities.find(f=>f[0]==='risk')[3])g.buildFacility('risk');
+      if(g.S.risk>(st.manageAt||25))g.rectifyNow();
+    }
+    for(const f of g.facilities)if(!g.S.facilities[f[0]]&&g.S.money>f[3]*3){
+      if(st.noCompliance&&f[0]==='risk')continue;
+      g.buildFacility(f[0]);
+    }
     if(g.S.money<0&&!g.S.loan)g.takeLoan();
     g.tickWeek();weeks++;
   }

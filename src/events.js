@@ -1032,6 +1032,28 @@ const CHAINS={
   onSkip:x=>{EN(TEAM(x.c),-14);Q(x.c,'work',-10);addBuzz(-4)}}
 };
 
+// ── 按阈值触发的事件（不进随机池，由 processRisk 直接调用）────
+const RISK_EVENTS={
+ probe:{id:'ev_probe',tier:'risk',mood:'press',
+  title:'司法局来立案调查',
+  text:x=>`一纸调查通知送到所里。近两年的收费记录、冲突检索、归档情况，要在十天内报上去。`+
+    `带队的那位说得很客气："配合一下，把情况说清楚就行。"`,
+  choices:[
+   {label:'全面配合，该补的补该改的改',cost:x=>Math.round(Math.max(40000,S.risk*2600)/1000)*1000,
+    note:'执业风险 -16 · 占人占时间',
+    apply:x=>{addRisk(-16);addBuzz(2);
+      S.staff.filter(free).slice(0,2).forEach(e=>e.energy=clamp(e.energy-12,0,100));
+      addNews('司法局','调查结束，出具了整改意见，没有进一步处理。')}},
+   {label:'请个懂行的人帮着走一趟',cost:x=>Math.round(Math.max(90000,S.risk*4800)/1000)*1000,risk:8,
+    note:'执业风险 -22 · 但这次配合本身也会被记一笔',
+    apply:x=>{addRisk(-22);addNews('司法局','调查很快结束了，过程比想象中顺利。')}},
+   {label:'材料先报一部分，拖着看',
+    note:'执业风险 +7 · 这事不会自己过去',
+    apply:x=>{addRisk(7,'调查期间材料报送不全');addBuzz(-4);
+      addNews('司法局','调查没有结束，要求补充材料。')}}],
+  onSkip:x=>{addRisk(10,'立案调查无人应对');addBuzz(-6)}}
+};
+
 // ── 行业新闻：只进消息栏，不弹窗 ────────────────────────────
 const NEWSFEED=[
  ['行业','律协发布年度报告：全省执业律师数同比增长 6.8%，青年律师流失率仍在两成以上。'],

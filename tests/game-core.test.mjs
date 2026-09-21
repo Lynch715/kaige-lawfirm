@@ -33,14 +33,16 @@ function makeCtx(){
   ctx.window={addEventListener(){}};
   ctx.globalThis=ctx;
   vm.createContext(ctx);
-  const code=['src/data.js','src/events.js','src/art.js','src/game.js']
+  const code=['src/data.js','src/events.js','src/art.js','src/trial.js','src/game.js']
     .map(f=>fs.readFileSync(path.join(ROOT,f),'utf8')).join('\n;\n');
   // 生产代码用 let/const 声明，在 vm 里不会挂到 globalThis 上。
   // 这里追加一段只在测试里存在的桥接，把需要的符号导出来，不改动 src/。
   const bridge=`
   globalThis.__api={
     get S(){return S}, set S(v){S=v},
-    KEY,VERSION,OFFICES,scaleDefs,PHASES,QUALITIES,FEES,EFFORTS,DEPTS,CASE_TYPES,ORIGINS,dailyWork,dailyEstimate,person,resolveEvent,skipEvent,confirmHearing,
+    KEY,VERSION,OFFICES,scaleDefs,PHASES,QUALITIES,FEES,EFFORTS,DEPTS,CASE_TYPES,ORIGINS,dailyWork,dailyEstimate,person,
+    CARDS,BEATS,trialEligible,startTrial,playCard,skipTrial,closeTrial,cardPower,TRIAL_TIERS,
+    processRisk,rectifyNow,processContracts,renewEvent,closeCase,RISK_EVENTS,processCases,resolveEvent,skipEvent,confirmHearing,
     get curEvent(){return curEvent}, get curCase(){return curCase},
     RISK_DECAY,RISK_DECAY_WEEKS,RISK_TIERS,EVENTS,CHAINS,NEWSFEED,ART,roles,GOALS,ACHIEVEMENTS,
     free,pick,clamp,teamOf,
@@ -127,6 +129,12 @@ group('推进整整十年（520 周）');
         else g.resolveEvent(Math.floor(Math.random()*ev.choices.length));
       }
       if(g.curCase)g.confirmHearing();
+      // 开庭了就打完。一半随机出牌，一半交给出庭律师。
+      if(g.S.trial&&!g.S.trial.done){
+        if(Math.random()<.5)g.skipTrial();
+        else{let n=0;while(g.S.trial&&!g.S.trial.done&&n++<8)g.playCard(g.S.trial.hand[0])}
+      }
+      if(g.S.trial&&g.S.trial.done)g.closeTrial();
       // 有空位就接一个案子，模拟正常游玩
       if(g.S.active.length<g.OFFICES[g.S.office].slots&&g.S.leads.length&&!g.S.suspendUntil){
         const l=g.S.leads.find(x=>!(g.S.flags.smallOnly&&x.scale!=='small')&&!(g.S.flags.noListed&&x.clientType==='listed'));
@@ -240,6 +248,182 @@ group('结案评级');
   const lo={...c,quality:{fact:0,law:0,deal:0,work:0}};
   ok('满维评级高于空维',g.baseScore(hi)>g.baseScore(lo)+4);
   ok('判决文案随分数变',g.verdictText(9,true)!==g.verdictText(3,true));
+}
+
+// ── 5b. 庭审小对抗 ────────────────────────────────────────
+group('庭审');
+{
+  const g=makeCtx();g.newGame('spinoff');
+  const mk=(scale,dept,q)=>({id:g.S.nextId++,name:'测试案',title:'x',brief:'',type:dept==='corp'?'ma':'contract',
+    dept,scale,clientName:'x',clientType:'sme',fee:450000,feePlan:'fixed',effort:'normal',
+    team:g.S.staff.slice(0,3).map(e=>e.id),phase:2,prog:60,quality:{fact:q,law:q,deal:q,work:q},
+    order:null,rush:0,weeks:9,cost:0,paidIn:0,polish:0,scheduled:true,
+    hearing:{w:0,m:3,y:2027,media:1,crowd:.15},sat:70,start:0});
+
+  ok('小案不开庭',!g.trialEligible(mk('small','lit',60)));
+  ok('非诉不开庭',!g.trialEligible(mk('major','corp',60)));
+  ok('大案诉讼要开庭',g.trialEligible(mk('major','lit',60)));
+
+  // 克制关系必须成环，不然有牌永远是废牌
+  const ids=Object.keys(g.BEATS);
+  ok('克制关系成环',ids.every(k=>g.BEATS[g.BEATS[k]]!==undefined)&&ids.length>=7,ids.length+' 条');
+  ok('每张攻防牌都被某张克制',ids.every(k=>Object.values(g.BEATS).includes(k)));
+  ok('策略牌不参与克制',!g.BEATS.mediate&&!g.BEATS.concede);
+
+  // 牌的强度跟着案件四维走
+  const weak=mk('major','lit',10), strong=mk('major','lit',90);
+  const card=g.CARDS.find(c=>c.id==='doc');
+  let lo=0,hi=0;for(let i=0;i<60;i++){lo+=g.cardPower(weak,card);hi+=g.cardPower(strong,card)}
+  ok('四维高的案子牌更硬',hi>lo*3,`${(lo/60).toFixed(1)} vs ${(hi/60).toFixed(1)}`);
+
+  // 一键跳过：四维越好，心证越高
+  const run=q=>{const c=mk('major','lit',q);g.S.active=[c];g.startTrial(c.id);
+    g.skipTrial();const v=g.S.trial.conviction;const b=c.trialBonus;g.closeTrial();return {v,b}};
+  const bad=run(5), good=run(95);
+  ok('跳过时四维差的心证低',bad.v<50,bad.v.toFixed(0));
+  ok('跳过时四维好的心证高',good.v>60,good.v.toFixed(0));
+  ok('心证落档给出评级修正',good.b>bad.b,`${bad.b} → ${good.b}`);
+  ok('修正值在规范定的四档里',g.TRIAL_TIERS.map(r=>r[1]).includes(good.b));
+
+  // 打满全程不会崩，且一定会结束
+  let err=null,rounds=0;
+  try{
+    for(let k=0;k<20;k++){
+      const c=mk('major','lit',50+k);g.S.active=[c];g.startTrial(c.id);
+      let n=0;while(g.S.trial&&!g.S.trial.done&&n++<12)g.playCard(g.S.trial.hand[0]);
+      rounds+=n;
+      ok2:{ if(!g.S.trial.done)err=new Error('打了 12 轮还没结束'); }
+      g.closeTrial();
+    }
+  }catch(e){err=e}
+  ok('连打 20 局不崩且都能结束',!err,err&&err.message);
+
+  // 模拟法庭室多发一张牌
+  const c1=mk('major','lit',60);g.S.active=[c1];g.startTrial(c1.id);
+  const n1=g.S.trial.hand.length;g.closeTrial();
+  g.S.facilities.court=1;
+  const c2=mk('major','lit',60);g.S.active=[c2];g.startTrial(c2.id);
+  const n2=g.S.trial.hand.length;g.closeTrial();
+  ok('模拟法庭室起手多一张牌',n2===n1+1,`${n1} → ${n2}`);
+
+  // 一个案子只打一次
+  const c3=mk('major','lit',60);g.S.active=[c3];g.startTrial(c3.id);g.skipTrial();g.closeTrial();
+  ok('打完就不会再开第二次',!g.trialEligible(c3));
+}
+
+// ── 5c. 红线中段链路 ──────────────────────────────────────
+group('红线中段');
+{
+  const g=makeCtx();g.newGame('spinoff');
+  // 65 档：立案调查，不是只发条消息
+  g.S.risk=70;g.processRisk();
+  ok('65 档会弹立案调查',!!g.curEvent&&g.curEvent.ev.id==='ev_probe',g.curEvent&&g.curEvent.ev.id);
+  const before=g.S.risk;
+  g.resolveEvent(0);                       // 全面配合
+  ok('配合调查能把风险压下来',g.S.risk<before-10,`${before} → ${g.S.risk}`);
+
+  // 平息之后不会立刻又来，要再涨 12 点
+  g.S.risk=72;g.processRisk();
+  ok('刚查过不会马上再查',!g.curEvent,g.curEvent&&g.curEvent.ev.id);
+  g.S.risk=90;g.processRisk();
+  if(g.curEvent)g.skipEvent();
+
+  // 85 档：先下整改通知，不是直接停业
+  const g2=makeCtx();g2.newGame('spinoff');
+  g2.S.flags.probeAt=999;                  // 跳过立案那一档，单测整改
+  g2.S.risk=88;g2.processRisk();
+  ok('85 档先下限期整改通知',g2.S.rectify>g2.S.week&&!g2.S.suspendUntil,`rectify=${g2.S.rectify}`);
+  ok('整改期是六周',g2.S.rectify-g2.S.week===6);
+  // 整改期内降下来 → 免于停业
+  g2.S.risk=60;g2.S.week=g2.S.rectify;g2.processRisk();
+  ok('整改期内降下来就免于停业',!g2.S.suspendUntil&&g2.S.rectify===0);
+
+  // 整改期满还在 85 以上 → 停业
+  const g3=makeCtx();g3.newGame('spinoff');
+  g3.S.flags.probeAt=999;
+  g3.S.risk=90;g3.processRisk();
+  g3.S.week=g3.S.rectify;g3.processRisk();
+  ok('整改期满没降下来才停业',g3.S.suspendUntil>g3.S.week);
+
+  // 主动整改
+  const g4=makeCtx();g4.newGame('spinoff');
+  g4.S.risk=50;g4.S.money=5000000;
+  const r0=g4.S.risk;g4.rectifyNow();
+  ok('主动合规整改降 12 点',Math.abs(g4.S.risk-(r0-12))<.01,`${r0} → ${g4.S.risk}`);
+  const r1=g4.S.risk;g4.rectifyNow();
+  ok('八周内不能连做第二次',g4.S.risk===r1);
+}
+
+// ── 5d. 合约与人员流动 ────────────────────────────────────
+group('合约');
+{
+  const g=makeCtx();g.newGame('spinoff');
+  ok('每个人都有合约期',g.S.staff.every(e=>e.until>0));
+  ok('开局的合约到期时间是错开的',new Set(g.S.staff.map(e=>e.until)).size>=3);
+
+  // 到期前 12 周来谈
+  const e=g.S.staff[0];e.until=g.S.week+10;
+  g.processContracts();
+  ok('到期前三个月来谈续约',!!g.curEvent&&g.curEvent.ev.id==='renew_'+e.id,g.curEvent&&g.curEvent.ev.id);
+  ok('给了三个选项',g.curEvent.ev.choices.length===3);
+
+  // 按他开的价签
+  const pay0=e.salary;
+  g.resolveEvent(0);
+  ok('按开价签会涨薪并续约',e.salary>pay0&&e.until>g.S.week+150,`${pay0} → ${e.salary}`);
+  ok('续完之后还会再谈下一轮',e.talked===0);
+
+  // 改分红制
+  const e2=g.S.staff[1];e2.until=g.S.week+10;e2.talked=0;
+  const pay1=e2.salary;
+  g.processContracts();g.resolveEvent(2);
+  ok('分红制不涨底薪',e2.salary===pay1);
+  ok('分红制记了分成比例',e2.share>0,e2.share);
+
+  // 分红的人经手的案子，结案要分钱出去
+  const c={id:g.S.nextId++,name:'测试',title:'x',brief:'',type:'contract',dept:'lit',scale:'major',
+    clientName:'测试公司',clientType:'sme',fee:450000,feePlan:'fixed',effort:'normal',
+    team:[e2.id],phase:3,prog:100,quality:{fact:70,law:70,deal:70,work:70},order:null,rush:0,
+    weeks:18,cost:0,paidIn:0,polish:0,scheduled:true,hearing:{w:0,m:3,y:2027,media:1,crowd:.15},sat:70,start:0};
+  g.S.active.push(c);g.closeCase(c);
+  ok('分红制的人结案时分走一笔',c.shareOut>0,c.shareOut);
+  ok('分走的是收款的 4%',Math.abs(c.shareOut-c.paidIn*.04)<2,`${c.shareOut} vs ${Math.round(c.paidIn*.04)}`);
+
+  // 放着不管，到期就走人
+  const g5=makeCtx();g5.newGame('spinoff');
+  const e3=g5.S.staff[2];e3.until=g5.S.week+10;
+  g5.processContracts();g5.skipEvent();
+  const n0=g5.S.staff.length;
+  g5.S.week=e3.until;g5.processContracts();
+  ok('到期没续的人会走',g5.S.staff.length===n0-1&&!g5.S.staff.some(x=>x.id===e3.id));
+}
+
+// ── 5e. 人走光的案子 ──────────────────────────────────────
+group('案组空了');
+{
+  const g=makeCtx();g.newGame('spinoff');
+  const c={id:g.S.nextId++,name:'测试案',title:'x',brief:'',type:'contract',dept:'lit',scale:'major',
+    clientName:'测试公司',clientType:'sme',fee:450000,feePlan:'fixed',effort:'normal',
+    team:g.S.staff.slice(0,3).map(e=>e.id),phase:1,prog:30,quality:{fact:50,law:50,deal:50,work:50},
+    order:null,rush:0,weeks:5,cost:0,paidIn:100000,polish:0,scheduled:false,hearing:null,sat:70,start:0,clientId:null};
+  g.S.active.push(c);
+  // 把案组里的人全弄走，模拟合约到期/被挖/辞退
+  g.S.staff=g.S.staff.filter(e=>!c.team.includes(e.id));
+  const q0=c.quality.fact;
+  g.processCases();
+  ok('离所的人会被清出案组',c.team.length===0);
+  ok('没人办的案子会开始烂',c.quality.fact<q0,`${q0} → ${c.quality.fact}`);
+  ok('第一周就提醒玩家',g.S.news.some(n=>n.text.includes('没人管')));
+  for(let i=0;i<6;i++)g.processCases();
+  ok('拖够六周客户解约',!g.S.active.some(x=>x.id===c.id));
+  ok('解约要退一半已收费用',g.S.news.some(n=>n.text.includes('退回一半')));
+
+  // 案子不会因为没人就永远卡着刷事件
+  const g2=makeCtx();g2.newGame('spinoff');
+  const c2={...c,id:g2.S.nextId++,team:[],idle:0,quality:{fact:50,law:50,deal:50,work:50}};
+  g2.S.active.push(c2);
+  let w=0;while(g2.S.active.length&&w++<20)g2.processCases();
+  ok('空案组最多拖二十周内必定了结',g2.S.active.length===0,w+' 周');
 }
 
 // ── 6. 存档迁移 ────────────────────────────────────────────
